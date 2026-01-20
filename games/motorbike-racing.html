@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Rider | GameHub Pro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .game-wrapper {
+            max-width: 500px;
+            margin: 40px auto;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+        }
+
+        .hud-overlay {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .hud-box {
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 10px 15px;
+            border-radius: 8px;
+            color: #fff;
+            font-weight: 800;
+            font-size: 14px;
+        }
+
+        .accent {
+            color: #f59e0b;
+        }
+
+        .game-body {
+            position: relative;
+            background: #111;
+            height: 650px;
+            overflow: hidden;
+        }
+
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .controls-hint {
+            position: absolute;
+            bottom: 20px;
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 12px;
+            pointer-events: none;
+        }
+
+        .game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+
+        .game-over-screen h1 {
+            font-size: 3rem;
+            color: #f59e0b;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px #f59e0b;
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <div class="bg-glow-container">
+        <div class="glow-sphere sphere-1" style="background: radial-gradient(circle, #f59e0b, transparent);"></div>
+        <div class="glow-sphere sphere-2"></div>
+    </div>
+
+    <header class="main-header" style="position: relative; background: transparent; border: none;">
+        <div class="nav-container">
+            <a href="../index.html" class="logo" style="text-decoration: none; color: inherit;">
+                <i data-lucide="arrow-left"></i>
+                <span>BACK TO <span class="accent-text">HUB</span></span>
+            </a>
+            <h2 style="font-weight:800; letter-spacing:-1px">CYBER RIDER</h2>
+        </div>
+    </header>
+
+    <div class="game-wrapper">
+        <div class="game-body">
+            <div class="hud-overlay">
+                <div class="hud-box">SPEED: <span class="accent" id="speedDisp">0</span> KM/H</div>
+                <div class="hud-box">SCORE: <span class="accent" id="scoreDisp">0</span></div>
+            </div>
+
+            <canvas id="gameCanvas"></canvas>
+
+            <div class="controls-hint">
+                [ ← / → ] WEAVE &nbsp;&nbsp;&nbsp; [ ↑ ] ACCELERATE
+            </div>
+
+            <div class="game-over-screen" id="gameOver">
+                <h1>WIPEOUT</h1>
+                <p style="color:#ddd; margin-bottom: 30px; font-size: 1.2rem;">Total Distance: <span id="finalScore"
+                        class="accent">0</span> m</p>
+                <div style="display:flex; gap:15px">
+                    <button class="btn-primary" onclick="resetGame()"
+                        style="background:#f59e0b; border-color:#f59e0b; color:#000">RIDE AGAIN</button>
+                    <button class="btn-secondary" onclick="window.location.href='../index.html'">GARAGE</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/shared.js"></script>
+    <script>
+        lucide.createIcons();
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let state = {
+            active: true,
+            frame: 0,
+            score: 0,
+            speed: 0,
+            maxSpeed: 15,
+            x: 250,
+            y: 500,
+            w: 30,
+            h: 60,
+            tilt: 0,
+            roadOffset: 0,
+            traffic: [],
+            debris: []
+        };
+
+        function resize() {
+            canvas.width = 500;
+            canvas.height = 650;
+        }
+
+        // Logic
+        function update() {
+            if (!state.active) return;
+            state.frame++;
+
+            // Acceleration (auto slow down if not pressing up)
+            // For this version, let's auto-accelerate to cruise, Up boost
+            state.speed += 0.05;
+            if (state.speed > state.maxSpeed) state.speed = state.maxSpeed;
+
+            state.score += Math.floor(state.speed);
+            state.roadOffset = (state.roadOffset + state.speed * 2) % 40;
+
+            // Traffic Spawning
+            if (Math.random() < 0.03) {
+                const laneX = Math.random() * (canvas.width - 60) + 30;
+                state.traffic.push({
+                    x: laneX,
+                    y: -100,
+                    w: 40,
+                    h: 70,
+                    speed: 5 + Math.random() * 5,
+                    color: Math.random() > 0.5 ? '#fff' : '#ef4444'
+                });
+            }
+
+            // Update Traffic
+            state.traffic.forEach((t, i) => {
+                t.y += (state.speed * 1.5) - (t.speed * 0.5); // Relative speed
+
+                // Collision
+                // Simple box
+                const buffer = 5;
+                if (state.x < t.x + t.w - buffer && state.x + state.w > t.x + buffer &&
+                    state.y < t.y + t.h - buffer && state.y + state.h > t.y + buffer) {
+                    crash();
+                }
+
+                if (t.y > canvas.height + 100) state.traffic.splice(i, 1);
+            });
+
+            // Debris/Lines
+            if (state.frame % 5 === 0) {
+                state.debris.push({
+                    x: Math.random() * canvas.width,
+                    y: -10,
+                    h: 20 + Math.random() * 40,
+                    speed: state.speed * 2
+                });
+            }
+            state.debris.forEach((d, i) => {
+                d.y += d.speed;
+                if (d.y > canvas.height) state.debris.splice(i, 1);
+            });
+
+            // Update UI
+            document.getElementById('speedDisp').innerText = Math.floor(state.speed * 12);
+            document.getElementById('scoreDisp').innerText = Math.floor(state.score / 10);
+        }
+
+        // Render
+        function draw() {
+            // Road
+            ctx.fillStyle = '#1c1917';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Tech Grid
+            ctx.strokeStyle = 'rgba(245, 158, 11, 0.1)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let x = 0; x < canvas.width; x += 50) {
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+            }
+            ctx.stroke();
+
+            // Moving Lines (Speed sensation)
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+            state.debris.forEach(d => {
+                ctx.fillRect(d.x, d.y, 2, d.h);
+            });
+
+            // Traffic
+            state.traffic.forEach(t => {
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = t.color;
+                ctx.fillStyle = t.color;
+                ctx.fillRect(t.x, t.y, t.w, t.h);
+                // Tail lights
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(t.x + 2, t.y + t.h - 5, 10, 5);
+                ctx.fillRect(t.x + t.w - 12, t.y + t.h - 5, 10, 5);
+                ctx.shadowBlur = 0;
+            });
+
+            // Player Bike
+            const mx = state.x + (state.w / 2);
+            const my = state.y;
+
+            ctx.save();
+            ctx.translate(mx, my);
+            ctx.rotate(state.tilt * 0.1); // Lean into turns
+
+            // Shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.beginPath();
+            ctx.ellipse(0, 40, 20, 40, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Bike Body
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#f59e0b';
+            ctx.fillStyle = '#f59e0b';
+
+            // Main Fairing
+            ctx.beginPath();
+            ctx.moveTo(0, -20);
+            ctx.lineTo(15, 10);
+            ctx.lineTo(15, 50);
+            ctx.lineTo(0, 60);
+            ctx.lineTo(-15, 50);
+            ctx.lineTo(-15, 10);
+            ctx.closePath();
+            ctx.fill();
+
+            // Windshield
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.moveTo(0, -15);
+            ctx.lineTo(10, 5);
+            ctx.lineTo(-10, 5);
+            ctx.fill();
+
+            // Rider Helmet
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.arc(0, 15, 12, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        function crash() {
+            state.active = false;
+            if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('loss');
+            document.getElementById('gameOver').style.display = 'flex';
+            document.getElementById('finalScore').innerText = Math.floor(state.score / 10).toLocaleString();
+        }
+
+        window.addEventListener('keydown', e => {
+            if (!state.active) return;
+            const step = 20;
+            if (e.key === 'ArrowLeft' || e.key === 'a') {
+                state.x = Math.max(0, state.x - step);
+                state.tilt = -1;
+                state.x -= 5;
+            }
+            if (e.key === 'ArrowRight' || e.key === 'd') {
+                state.x = Math.min(canvas.width - state.w, state.x + step);
+                state.tilt = 1;
+                state.x += 5;
+            }
+            if (e.key === 'ArrowUp' || e.key === 'w') {
+                state.maxSpeed = 25; // Boosting cap
+            }
+        });
+
+        window.addEventListener('keyup', e => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'ArrowRight' || e.key === 'd') {
+                state.tilt = 0;
+            }
+            if (e.key === 'ArrowUp' || e.key === 'w') {
+                state.maxSpeed = 15;
+            }
+        });
+
+        function resetGame() {
+            state.active = true;
+            state.score = 0;
+            state.speed = 0;
+            state.traffic = [];
+            state.debris = [];
+            state.x = 250;
+            document.getElementById('gameOver').style.display = 'none';
+        }
+
+        resize();
+        loop();
+    </script>
+</body>
+
+</html>

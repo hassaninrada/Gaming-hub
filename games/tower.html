@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smash Ball 3D | GameHub Pro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #000;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        #ui {
+            position: absolute;
+            top: 40px;
+            width: 100%;
+            text-align: center;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .score-box {
+            font-size: 80px;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+            margin: 0;
+        }
+
+        .power-bar-container {
+            width: 200px;
+            height: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            margin: 10px auto;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        #power-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #ff0055, #ff00ff);
+            transition: width 0.1s;
+        }
+
+        .overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            backdrop-filter: blur(15px);
+        }
+
+        h1 {
+            font-size: 64px;
+            margin: 0;
+            background: linear-gradient(45deg, #00e5ff, #ff00ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 900;
+        }
+
+        .btn-play {
+            margin-top: 40px;
+            padding: 20px 60px;
+            font-size: 24px;
+            font-weight: 900;
+            background: #fff;
+            color: #000;
+            border: none;
+            border-radius: 100px;
+            cursor: pointer;
+            box-shadow: 0 10px 40px rgba(255, 255, 255, 0.3);
+            transition: 0.3s;
+        }
+
+        .btn-play:hover {
+            transform: scale(1.1);
+        }
+
+        /* --- PREMIUM GAME HEADER --- */
+        .game-header-premium {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100px;
+            z-index: 1000;
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            padding: 0 40px;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .header-inner {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .hub-back {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            text-decoration: none;
+            color: #fff;
+            pointer-events: auto;
+            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .hub-back:hover {
+            transform: translateX(-5px) scale(1.05);
+        }
+
+        .back-icon-wrap {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            transition: 0.3s;
+        }
+
+        .hub-back:hover .back-icon-wrap {
+            border-color: #00e5ff;
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.4);
+            color: #00e5ff;
+        }
+
+        .hub-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1;
+        }
+
+        .hub-small {
+            font-size: 12px;
+            font-weight: 800;
+            color: rgba(255, 255, 255, 0.5);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .hub-main {
+            font-size: 26px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            text-transform: uppercase;
+        }
+
+        .hub-main .accent {
+            color: #00e5ff;
+        }
+
+        .game-title-badge {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 25px;
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            font-size: 18px;
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.7);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Post-processing effects */
+        .vignette {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 5;
+            background: radial-gradient(circle, transparent 40%, rgba(0, 0, 0, 0.5) 100%);
+            transition: opacity 0.3s;
+        }
+
+        .vignette.intense {
+            background: radial-gradient(circle, transparent 20%, rgba(0, 0, 0, 0.8) 100%);
+        }
+
+        .glitch {
+            animation: glitch-anim 0.1s infinite;
+        }
+
+        @keyframes glitch-anim {
+            0% {
+                transform: translate(0);
+                filter: hue-rotate(0deg);
+            }
+
+            20% {
+                transform: translate(-2px, 2px);
+                filter: hue-rotate(90deg);
+            }
+
+            40% {
+                transform: translate(-2px, -2px);
+                filter: hue-rotate(180deg);
+            }
+
+            60% {
+                transform: translate(2px, 2px);
+                filter: hue-rotate(270deg);
+            }
+
+            80% {
+                transform: translate(2px, -2px);
+                filter: hue-rotate(360deg);
+            }
+
+            100% {
+                transform: translate(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="game-header-premium">
+        <div class="header-inner">
+            <a href="../index.html" class="hub-back">
+                <div class="back-icon-wrap">
+                    <i data-lucide="arrow-left" style="width:28px; height:28px"></i>
+                </div>
+                <div class="hub-text">
+                    <span class="hub-small">Return to</span>
+                    <span class="hub-main">GameHub <span class="accent">Pro</span></span>
+                </div>
+            </a>
+            <div class="game-title-badge">
+                <span>SMASH BALL 3D</span>
+            </div>
+        </div>
+    </header>
+    <div class="vignette" id="vignette"></div>
+    <div id="game-container">
+        <div id="ui">
+            <h1 class="score-box" id="score">0</h1>
+            <div class="power-bar-container">
+                <div id="power-fill"></div>
+            </div>
+            <div style="color: #00e5ff; font-weight: 800; letter-spacing: 2px;">SUPER SMASH READY</div>
+        </div>
+
+        <div id="menu" class="overlay">
+            <h1>SMASH BALL 3D</h1>
+            <p style="color: #666; font-size: 18px; margin-top: 10px;">SPACE OR CLICK TO SMASH DOWN</p>
+            <div id="record-display" style="color: #00e5ff; font-weight: 800; margin: 10px 0;">RECORD: 0</div>
+            <button class="btn-play" onclick="startGame()">LETS SMASH</button>
+        </div>
+
+        <div id="game-over" class="overlay" style="display:none">
+            <h1
+                style="background: linear-gradient(45deg, #ff0000, #ff4400); -webkit-background-clip: text; background-clip: text;">
+                CRASHED
+            </h1>
+            <h2 id="final-score" style="color:#fff; font-size: 32px; margin-top: 20px;">SCORE: 0</h2>
+            <button class="btn-play" onclick="startGame()">TRY AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        let scene, camera, renderer, ball, tower;
+        let platforms = [];
+        let running = false;
+        let score = 0;
+        let ballY = 5;
+        let ballVY = 0;
+        let power = 0;
+        let isSmashing = false;
+        let comboCount = 0;
+
+        const TOWER_RADIUS = 2;
+        const GAP = 5;
+        const GRAVITY = -0.015;
+        const JUMP = 0.35;
+        const SMASH_SPEED = -0.8;
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050510);
+            scene.fog = new THREE.Fog(0x050510, 20, 60);
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 5, 20);
+            camera.lookAt(0, 0, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.getElementById('game-container').appendChild(renderer.domElement);
+
+            // Lights
+            scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+            const pLight = new THREE.PointLight(0x00e5ff, 1, 100);
+            pLight.position.set(5, 10, 5);
+            scene.add(pLight);
+
+            // Ball
+            const ballGeo = new THREE.SphereGeometry(0.4, 32, 32);
+            const ballMat = new THREE.MeshStandardMaterial({ color: 0x00e5ff, emissive: 0x00e5ff, emissiveIntensity: 0.5 });
+            ball = new THREE.Mesh(ballGeo, ballMat);
+            ball.position.set(0, 5, 3.5);
+            scene.add(ball);
+
+            const tGeo = new THREE.CylinderGeometry(TOWER_RADIUS, TOWER_RADIUS, 1000, 32);
+            const tMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.2, metalness: 0.5 });
+            tower = new THREE.Mesh(tGeo, tMat);
+            scene.add(tower);
+
+            // Grid-Floor
+            const grid = new THREE.GridHelper(100, 20, 0x00e5ff, 0x111111);
+            grid.position.y = -200;
+            scene.add(grid);
+
+            // Controls
+            window.addEventListener('mousedown', () => isSmashing = true);
+            window.addEventListener('mouseup', () => isSmashing = false);
+            window.addEventListener('touchstart', (e) => { e.preventDefault(); isSmashing = true; });
+            window.addEventListener('touchend', () => isSmashing = false);
+
+            window.addEventListener('keydown', (e) => {
+                if (e.code === 'Space') isSmashing = true;
+            });
+            window.addEventListener('keyup', (e) => {
+                if (e.code === 'Space') isSmashing = false;
+            });
+        }
+
+        function createPlatform(y, isCompleteHole = false) {
+            const group = new THREE.Group();
+            group.position.y = y;
+            group.userData.broken = false;
+
+            const holes = [];
+            while (holes.length < 3) {
+                let r = Math.floor(Math.random() * 12);
+                if (!holes.includes(r)) holes.push(r);
+            }
+
+            for (let i = 0; i < 12; i++) {
+                if (holes.includes(i)) continue;
+
+                const isTrap = Math.random() < 0.15 && y < -10;
+                const mat = new THREE.MeshStandardMaterial({
+                    color: isTrap ? 0xff0000 : 0x00e5ff,
+                    emissive: isTrap ? 0xff0000 : 0x00e5ff,
+                    emissiveIntensity: 0.2
+                });
+
+                const shape = new THREE.Shape();
+                const inner = TOWER_RADIUS;
+                const outer = TOWER_RADIUS + 2.5;
+                const start = (i / 12) * Math.PI * 2;
+                const end = ((i + 1) / 12) * Math.PI * 2;
+
+                shape.absarc(0, 0, outer, start, end, false);
+                shape.absarc(0, 0, inner, end, start, true);
+
+                const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.3, bevelEnabled: false });
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.rotation.x = -Math.PI / 2;
+                mesh.userData.isTrap = isTrap;
+                group.add(mesh);
+            }
+
+            tower.add(group);
+            platforms.push(group);
+        }
+
+        function startGame() {
+            platforms.forEach(p => tower.remove(p));
+            platforms = [];
+            score = 0;
+            ballY = 5;
+            ballVY = 0;
+            power = 0;
+            running = true;
+
+            document.getElementById('menu').style.display = 'none';
+            document.getElementById('game-over').style.display = 'none';
+            document.getElementById('score').innerText = '0';
+
+            for (let i = 0; i < 50; i++) {
+                createPlatform(-i * GAP);
+            }
+
+            loop();
+        }
+
+        function loop() {
+            if (!running) return;
+            requestAnimationFrame(loop);
+
+            // Tower rotation
+            tower.rotation.y += 0.02;
+
+            // Ball Physics
+            if (isSmashing) {
+                ballVY = SMASH_SPEED;
+                power = Math.min(100, power + 2);
+            } else {
+                ballVY += GRAVITY;
+                power = Math.max(0, power - 1);
+            }
+            ballY += ballVY;
+
+            // Collision
+            platforms.forEach((p, idx) => {
+                if (!p.userData.broken && ballVY < 0 && ballY <= p.position.y + 0.4 && ballY >= p.position.y - 0.5) {
+
+                    // Ball is at fixed Z. Calculate which sector is directly under ball.
+                    const angle = (Math.PI / 2 - tower.rotation.y + Math.PI * 20) % (Math.PI * 2);
+                    const sector = Math.floor((angle / (Math.PI * 2)) * 12);
+
+                    // Simple logic: Is there any geometry piece covering this sector?
+                    // (During creation holes were skipped, so we check if a segment exists)
+                    // For Smash Ball, when smashing with high power, we BREAK the platform.
+
+                    let onSolid = true; // Simplified for gameplay feel
+
+                    if (isSmashing && power > 30) {
+                        // SMASH THROUGH
+                        p.userData.broken = true;
+                        const isUlt = power > 70;
+                        createParticles(p.position.x, p.position.y, p.position.z, isUlt ? 0xff00ff : 0x00e5ff, isUlt ? 2 : 1);
+                        p.position.y -= 100; // Trash it
+                        score += 50;
+                        comboCount++;
+                        shakeCamera(isUlt ? 0.5 : 0.3);
+                        if (isUlt) flashScreen();
+                        document.getElementById('score').innerText = score;
+                    } else {
+                        // BOUNCE
+                        ballY = p.position.y + 0.4;
+                        ballVY = JUMP;
+                        comboCount = 0;
+                        shakeCamera(0.05);
+                    }
+                }
+            });
+
+            // Camera follow
+            ball.position.y = ballY;
+            camera.position.y += (ballY + 5 - camera.position.y) * 0.1;
+
+            // Ultimate Smash Effects
+            const isUlt = power > 70;
+            if (isSmashing && power > 30) {
+                ball.scale.set(isUlt ? 2 : 1.5, isUlt ? 2 : 1.5, isUlt ? 2 : 1.5);
+                ball.material.emissiveIntensity = isUlt ? 5.0 : 2.0;
+                ball.material.color.setHex(isUlt ? 0xff00ff : 0x00e5ff);
+                scene.fog.color.setHex(isUlt ? 0x440022 : 0x220011);
+
+                // Trail
+                if (Math.random() > 0.5) createTrail(ball.position.x, ball.position.y, ball.position.z, isUlt ? 0xff00ff : 0x00e5ff);
+            } else {
+                ball.scale.set(1, 1, 1);
+                ball.material.emissiveIntensity = 0.5;
+                ball.material.color.setHex(0x00e5ff);
+                scene.fog.color.setHex(0x050510);
+            }
+
+            // UI & Post-processing
+            const vignette = document.getElementById('vignette');
+            if (isSmashing) {
+                vignette.style.opacity = '1';
+                if (isUlt) vignette.classList.add('intense');
+                else vignette.classList.remove('intense');
+                if (isUlt) document.body.classList.add('glitch');
+            } else {
+                vignette.style.opacity = '0.5';
+                vignette.classList.remove('intense');
+                document.body.classList.remove('glitch');
+            }
+
+            document.getElementById('power-fill').style.width = power + '%';
+            document.getElementById('power-fill').style.background = isUlt ? 'linear-gradient(90deg, #ff00ff, #00e5ff)' : 'linear-gradient(90deg, #ff0055, #ff00ff)';
+            if (isUlt) document.querySelector('.power-bar-container').style.boxShadow = '0 0 15px #ff00ff';
+            else document.querySelector('.power-bar-container').style.boxShadow = 'none';
+
+            updateParticles();
+            renderer.render(scene, camera);
+        }
+
+        function shakeCamera(intensity) {
+            camera.position.x += (Math.random() - 0.5) * intensity;
+            camera.position.z += (Math.random() - 0.5) * intensity;
+        }
+
+        const particles = [];
+        function createParticles(x, y, z, color, scale = 1) {
+            for (let i = 0; i < 20 * scale; i++) {
+                const geo = new THREE.BoxGeometry(0.2 * scale, 0.2 * scale, 0.2 * scale);
+                const mat = new THREE.MeshBasicMaterial({ color: color, transparent: true });
+                const p = new THREE.Mesh(geo, mat);
+                p.position.set(x + (Math.random() - 0.5) * 4, y, z + (Math.random() - 0.5) * 4);
+                p.userData = {
+                    vx: (Math.random() - 0.5) * 0.8 * scale,
+                    vy: (Math.random()) * 0.8 * scale,
+                    vz: (Math.random() - 0.5) * 0.8 * scale,
+                    life: 1.0
+                };
+                scene.add(p);
+                particles.push(p);
+            }
+        }
+
+        function createTrail(x, y, z, color) {
+            const geo = new THREE.SphereGeometry(0.3, 8, 8);
+            const mat = new THREE.MeshBasicMaterial({ color: color, transparent: true, opacity: 0.5 });
+            const p = new THREE.Mesh(geo, mat);
+            p.position.set(x, y, z);
+            p.userData = { life: 1.0, isTrail: true };
+            scene.add(p);
+            particles.push(p);
+        }
+
+        function flashScreen() {
+            renderer.setClearColor(0xffffff, 1);
+            setTimeout(() => renderer.setClearColor(scene.fog.color, 1), 50);
+        }
+
+        function updateParticles() {
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                if (p.userData.isTrail) {
+                    p.userData.life -= 0.05;
+                    p.scale.multiplyScalar(0.9);
+                } else {
+                    p.position.x += p.userData.vx;
+                    p.position.y += p.userData.vy;
+                    p.position.z += p.userData.vz;
+                    p.userData.vy -= 0.02;
+                    p.userData.life -= 0.02;
+                }
+                p.material.opacity = p.userData.life;
+                if (p.userData.life <= 0) {
+                    scene.remove(p);
+                    particles.splice(i, 1);
+                }
+            }
+        }
+
+        function die() {
+            running = false;
+            const record = localStorage.getItem('smash_record') || 0;
+            if (score > record) {
+                localStorage.setItem('smash_record', score);
+                document.getElementById('final-score').innerText = "NEW RECORD: " + score;
+            } else {
+                document.getElementById('final-score').innerText = "SCORE: " + score;
+            }
+            document.getElementById('game-over').style.display = 'flex';
+        }
+
+        // Initialize high score display
+        window.addEventListener('load', () => {
+            const record = localStorage.getItem('smash_record') || 0;
+            const recordEl = document.getElementById('record-display');
+            if (recordEl) recordEl.innerText = "RECORD: " + record;
+        });
+
+        init();
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

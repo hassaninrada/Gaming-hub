@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shape Strike: Aim Trainer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #CCFF00;
+            --accent: #FF007A;
+            --bg: #050505;
+            --glass: rgba(255, 255, 255, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .premium-header {
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            position: fixed;
+            top: 0;
+            width: 100%;
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: #fff;
+            font-weight: 800;
+        }
+
+        .game-canvas {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            background: radial-gradient(circle at 50% 50%, #1a1a1a 0%, #050505 100%);
+            cursor: crosshair;
+            transition: background 0.2s;
+        }
+
+        @keyframes bg-pulse {
+            0% {
+                filter: brightness(1);
+            }
+
+            50% {
+                filter: brightness(1.3);
+            }
+
+            100% {
+                filter: brightness(1);
+            }
+        }
+
+        .game-canvas.rush {
+            animation: bg-pulse 0.5s infinite;
+        }
+
+        .shape {
+            position: absolute;
+            cursor: pointer;
+            transform: scale(0);
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .shape-circle {
+            border-radius: 50%;
+        }
+
+        .shape-square {
+            border-radius: 10px;
+        }
+
+        .shape-triangle {
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+        }
+
+        .shape.show {
+            transform: scale(1);
+        }
+
+        .shape.ghost {
+            opacity: 0.3;
+            background: white !important;
+            box-shadow: 0 0 30px #fff;
+        }
+
+        .shape.gold {
+            background: radial-gradient(circle, #FFD600 0%, #FFA000 100%) !important;
+            box-shadow: 0 0 40px #FFD600;
+        }
+
+        .shape.hit {
+            transform: scale(0);
+            opacity: 0;
+        }
+
+        .hud {
+            position: fixed;
+            top: 90px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 50;
+        }
+
+        .stat-item {
+            background: var(--glass);
+            padding: 15px 25px;
+            border-radius: 15px;
+            text-align: right;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .lbl {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: var(--primary);
+            font-weight: 800;
+        }
+
+        .val {
+            font-size: 28px;
+            font-weight: 900;
+        }
+
+        .combo-text {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 80px;
+            font-weight: 950;
+            color: var(--primary);
+            opacity: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .combo-text.show {
+            animation: combo-pop 0.5s forwards;
+        }
+
+        @keyframes combo-pop {
+            0% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(0.5);
+            }
+
+            50% {
+                opacity: 1;
+                transform: translate(-50%, -50%) scale(1.2);
+            }
+
+            100% {
+                opacity: 0;
+                transform: translate(-50%, -50%) scale(1.5);
+            }
+        }
+
+        #game-over {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 200;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn {
+            background: var(--primary);
+            color: #000;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-weight: 900;
+            cursor: pointer;
+            margin-top: 20px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="premium-header">
+        <a href="../index.html" class="back-btn"><i data-lucide="arrow-left"></i><span>BACK</span></a>
+        <div style="font-weight: 900; font-size: 24px; color: var(--primary);">SHAPE <span
+                style="color: #fff;">STRIKE</span></div>
+        <div style="width: 80px;"></div>
+    </header>
+
+    <div class="hud">
+        <div class="stat-item">
+            <div class="lbl">Score</div>
+            <div class="val" id="score">0</div>
+        </div>
+        <div class="stat-item">
+            <div class="lbl">Accuracy</div>
+            <div class="val" id="accuracy">100%</div>
+        </div>
+        <div class="stat-item">
+            <div class="lbl">Time</div>
+            <div class="val" id="time">30s</div>
+        </div>
+    </div>
+
+    <div class="game-canvas" id="canvas"></div>
+    <div class="combo-text" id="combo-ui">COMBO x2</div>
+
+    <div id="game-over">
+        <h1 style="font-size: 64px; color: var(--primary);">TRAINING COMPLETE</h1>
+        <div style="font-size: 32px; margin-top: 20px;">Score: <span id="final-score"
+                style="color: var(--accent);">0</span></div>
+        <div style="font-size: 20px; margin-top: 10px;">Accuracy: <span id="final-acc">0</span></div>
+        <button class="btn" onclick="location.reload()">RETRY SESSION</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const scoreEl = document.getElementById('score');
+        const timeEl = document.getElementById('time');
+        const accEl = document.getElementById('accuracy');
+        const gameOverEl = document.getElementById('game-over');
+
+        let score = 0;
+        let timeLeft = 30;
+        let totalClicks = 0;
+        let successfulClicks = 0;
+        let combo = 0;
+        let gameActive = true;
+        let goldRush = false;
+
+        function speak(text) {
+            // Voice disabled
+        }
+
+        const SHAPE_CONFIGS = [
+            { class: 'shape-circle', color: '#CCFF00' },
+            { class: 'shape-square', color: '#FF007A' },
+            { class: 'shape-triangle', color: '#00E5FF' }
+        ];
+
+        function spawnShape() {
+            if (!gameActive) return;
+
+            const config = SHAPE_CONFIGS[Math.floor(Math.random() * SHAPE_CONFIGS.length)];
+            let size = Math.random() * 50 + 30;
+            let x = Math.random() * (window.innerWidth - size - 60) + 30;
+            let y = Math.random() * (window.innerHeight - size - 100) + 80;
+
+            const vx = (Math.random() - 0.5) * 4;
+            const vy = (Math.random() - 0.5) * 4;
+
+            const isGhost = Math.random() < 0.1 && score > 50;
+            const shape = document.createElement('div');
+            shape.className = `shape ${config.class}`;
+            if (isGhost) shape.classList.add('ghost');
+            if (goldRush) shape.classList.add('gold');
+
+            shape.style.width = size + 'px';
+            shape.style.height = size + 'px';
+            shape.style.left = x + 'px';
+            shape.style.top = y + 'px';
+            shape.style.backgroundColor = isGhost ? '#fff' : config.color;
+            shape.style.boxShadow = `0 0 20px ${isGhost ? '#fff' : config.color}44`;
+
+            shape.onclick = (e) => {
+                e.stopPropagation();
+                combo++;
+                let points = Math.round((100 / size) * 5);
+                if (isGhost) { points *= 5; speak("GHOST SHOT!"); }
+                if (goldRush) points *= 2;
+
+                score += points;
+                successfulClicks++;
+                totalClicks++;
+                scoreEl.innerText = score;
+                updateAccuracy();
+
+                if (combo > 0 && combo % 10 === 0) {
+                    const callouts = ["IMPECCABLE", "UNSTOPPABLE", "GODLIKE", "DIVINE"];
+                    speak(callouts[Math.min(3, Math.floor(combo / 10) - 1)]);
+                    showComboUI();
+                }
+
+                if (score > 0 && score % 1000 === 0 && !goldRush) startGoldRush();
+
+                canvas.style.backgroundColor = 'rgba(0, 255, 0, 0.1)';
+                setTimeout(() => canvas.style.backgroundColor = '', 100);
+
+                shape.classList.add('hit');
+                setTimeout(() => shape.remove(), 200);
+            };
+
+            canvas.appendChild(shape);
+            setTimeout(() => shape.classList.add('show'), 10);
+
+            // Movement and Shrink loop
+            let currentSize = size;
+            const moveInterval = setInterval(() => {
+                if (!gameActive || !shape.parentElement) { clearInterval(moveInterval); return; }
+                x += vx; y += vy;
+                currentSize *= 0.995; // Shrink
+                shape.style.left = x + 'px';
+                shape.style.top = y + 'px';
+                shape.style.width = currentSize + 'px';
+                shape.style.height = currentSize + 'px';
+
+                if (currentSize < 10) {
+                    shape.remove();
+                    clearInterval(moveInterval);
+                }
+            }, 20);
+
+            setTimeout(spawnShape, Math.max(800 - (score * 0.5), 250));
+        }
+
+        function showComboUI() {
+            const ui = document.getElementById('combo-ui');
+            ui.innerText = `STREAK x${combo}`;
+            ui.classList.remove('show');
+            void ui.offsetWidth;
+            ui.classList.add('show');
+        }
+
+        function startGoldRush() {
+            goldRush = true;
+            canvas.classList.add('rush');
+            speak("GOLD RUSH ACTIVATED! DOUBLE POINTS!");
+            setTimeout(() => {
+                goldRush = false;
+                canvas.classList.remove('rush');
+            }, 7000);
+        }
+
+        canvas.onclick = () => {
+            if (!gameActive) return;
+            totalClicks++;
+            combo = 0;
+            updateAccuracy();
+            canvas.style.backgroundColor = 'rgba(255, 0, 0, 0.1)';
+            setTimeout(() => canvas.style.backgroundColor = '', 100);
+            speak("MISS");
+        };
+
+        function updateAccuracy() {
+            if (totalClicks === 0) return;
+            const acc = Math.round((successfulClicks / totalClicks) * 100);
+            accEl.innerText = acc + '%';
+        }
+
+        function startTimer() {
+            speak("TRAINING COMMENCE.");
+            const timer = setInterval(() => {
+                timeLeft--;
+                timeEl.innerText = timeLeft + 's';
+                if (timeLeft <= 5 && timeLeft > 0) speak(timeLeft.toString());
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function endGame() {
+            gameActive = false;
+            speak("TRAINING COMPLETE. FINAL SCORE " + score + ". ACCURACY " + accEl.innerText);
+            gameOverEl.style.display = 'flex';
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('final-acc').innerText = accEl.innerText;
+        }
+
+        spawnShape();
+        startTimer();
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

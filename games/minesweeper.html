@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Minesweeper Pro 2.0 | GameHub Pro</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .game-wrapper {
+      max-width: 800px;
+      margin: 40px auto;
+      background: var(--card-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(20px);
+      user-select: none;
+    }
+
+    .stats-bar {
+      padding: 15px 40px;
+      background: rgba(124, 77, 255, 0.1);
+      display: flex;
+      justify-content: space-around;
+      font-size: 14px;
+      font-weight: 800;
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .stat-val {
+      color: var(--accent-secondary);
+      margin-left: 5px;
+      font-size: 18px;
+    }
+
+    .game-body {
+      display: flex;
+      justify-content: center;
+      padding: 30px;
+      background: #111;
+    }
+
+    #grid {
+      display: grid;
+      gap: 2px;
+      background: #222;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #333;
+    }
+
+    .cell {
+      width: 30px;
+      height: 30px;
+      background: #444;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 16px;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: background 0.1s;
+    }
+
+    .cell:hover {
+      background: #555;
+    }
+
+    .cell.revealed {
+      background: #222;
+      border: 1px solid #333;
+      cursor: default;
+    }
+
+    .cell.flagged {
+      background: #333;
+      color: #ff0000;
+    }
+
+    .c1 {
+      color: #3b82f6;
+    }
+
+    .c2 {
+      color: #10b981;
+    }
+
+    .c3 {
+      color: #ef4444;
+    }
+
+    .c4 {
+      color: #8b5cf6;
+    }
+
+    .c5 {
+      color: #f59e0b;
+    }
+
+    .c6 {
+      color: #06b6d4;
+    }
+
+    .c7 {
+      color: #fff;
+    }
+
+    .c8 {
+      color: #888;
+    }
+
+    .bomb {
+      background: #ff0000 !important;
+      color: #000;
+    }
+
+    .game-over-modal {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+  </style>
+</head>
+
+<body class="dark-theme">
+  <header class="main-header" style="position: relative; background: transparent; border: none;">
+    <div class="nav-container">
+      <a href="../index.html" class="logo" style="text-decoration: none; color: inherit;">
+        <i data-lucide="arrow-left"></i>
+        <span>BACK TO <span class="accent-text">HUB</span></span>
+      </a>
+      <h2 style="font-weight:800; letter-spacing:-1px">MINESWEEPER PRO 2.0</h2>
+    </div>
+  </header>
+
+  <div class="game-wrapper" style="position:relative">
+    <div class="stats-bar">
+      <span>MINES: <span class="stat-val" id="minesCount">0</span></span>
+      <span>TIME: <span class="stat-val" id="timer">000</span></span>
+    </div>
+
+    <div class="game-body">
+      <div id="grid"></div>
+    </div>
+
+    <div class="game-over-modal" id="modal">
+      <h1 id="modalTitle" style="font-size:48px; margin-bottom:10px">GAME OVER</h1>
+      <p id="modalDesc" style="color:#aaa; margin-bottom:20px">Boom.</p>
+      <button class="btn-primary" onclick="resetGame()">RESTART</button>
+    </div>
+  </div>
+
+  <script src="../js/shared.js"></script>
+  <script>
+    lucide.createIcons();
+
+    const ROWS = 16;
+    const COLS = 16;
+    const MINES = 40;
+
+    let grid = [];
+    let revealed = [];
+    let flagged = [];
+    let active = false;
+    let diff = MINES;
+    let startTime = 0;
+    let timerInt;
+    let firstClick = true;
+
+    const gridEl = document.getElementById('grid');
+    gridEl.style.gridTemplateColumns = `repeat(${COLS}, 30px)`;
+
+    function resetGame() {
+      clearInterval(timerInt);
+      grid = Array(ROWS * COLS).fill(0);
+      revealed = Array(ROWS * COLS).fill(false);
+      flagged = Array(ROWS * COLS).fill(false);
+      active = true;
+      firstClick = true;
+      diff = MINES;
+      document.getElementById('minesCount').innerText = diff;
+      document.getElementById('timer').innerText = '000';
+      document.getElementById('modal').style.display = 'none';
+      render();
+    }
+
+    function createMines(excludeIdx) {
+      let placed = 0;
+      while (placed < MINES) {
+        let idx = Math.floor(Math.random() * (ROWS * COLS));
+        if (grid[idx] !== 'B' && idx !== excludeIdx) {
+          grid[idx] = 'B';
+          placed++;
+        }
+      }
+
+      // Calc numbers
+      for (let i = 0; i < ROWS * COLS; i++) {
+        if (grid[i] === 'B') continue;
+        let count = 0;
+        getNeighbors(i).forEach(n => {
+          if (grid[n] === 'B') count++;
+        });
+        grid[i] = count;
+      }
+    }
+
+    function getNeighbors(idx) {
+      let r = Math.floor(idx / COLS);
+      let c = idx % COLS;
+      let n = [];
+      for (let dr = -1; dr <= 1; dr++) {
+        for (let dc = -1; dc <= 1; dc++) {
+          if (dr === 0 && dc === 0) continue;
+          let nr = r + dr;
+          let nc = c + dc;
+          if (nr >= 0 && nr < ROWS && nc >= 0 && nc < COLS) {
+            n.push(nr * COLS + nc);
+          }
+        }
+      }
+      return n;
+    }
+
+    function render() {
+      gridEl.innerHTML = '';
+      for (let i = 0; i < ROWS * COLS; i++) {
+        let d = document.createElement('div');
+
+        if (revealed[i]) {
+          d.className = 'cell revealed';
+          if (grid[i] === 'B') {
+            d.className = 'cell revealed bomb';
+            d.innerHTML = '💣';
+          } else if (grid[i] > 0) {
+            d.classList.add('c' + grid[i]);
+            d.innerText = grid[i];
+          }
+        } else {
+          d.className = 'cell';
+          if (flagged[i]) {
+            d.className = 'cell flagged';
+            d.innerHTML = '🚩';
+          }
+          d.onclick = () => click(i);
+          d.oncontextmenu = (e) => { e.preventDefault(); flag(i); };
+        }
+        gridEl.appendChild(d);
+      }
+    }
+
+    function click(idx) {
+      if (!active || flagged[idx]) return;
+
+      if (firstClick) {
+        createMines(idx);
+        firstClick = false;
+        startTimer();
+      }
+
+      if (grid[idx] === 'B') {
+        gameOver(false);
+        return;
+      }
+
+      reveal(idx);
+      render(); // Simple global render. Optimize in Pro V3?
+      checkWin();
+    }
+
+    function reveal(idx) {
+      if (revealed[idx] || flagged[idx]) return;
+      revealed[idx] = true;
+      if (grid[idx] === 0) {
+        getNeighbors(idx).forEach(n => reveal(n));
+      }
+    }
+
+    function flag(idx) {
+      if (!active || revealed[idx]) return;
+      flagged[idx] = !flagged[idx];
+      diff += flagged[idx] ? -1 : 1;
+      document.getElementById('minesCount').innerText = diff;
+      render();
+      if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('click');
+    }
+
+    function startTimer() {
+      startTime = Date.now();
+      timerInt = setInterval(() => {
+        let el = (Date.now() - startTime) / 1000 | 0;
+        document.getElementById('timer').innerText = el.toString().padStart(3, '0');
+      }, 1000);
+    }
+
+    function checkWin() {
+      let left = 0;
+      for (let i = 0; i < ROWS * COLS; i++) {
+        if (!revealed[i] && grid[i] !== 'B') left++;
+      }
+      if (left === 0) gameOver(true);
+    }
+
+    function gameOver(win) {
+      active = false;
+      clearInterval(timerInt);
+      // reveal all bombs
+      for (let i = 0; i < ROWS * COLS; i++) {
+        if (grid[i] === 'B') revealed[i] = true;
+      }
+      render();
+
+      let modal = document.getElementById('modal');
+      let title = document.getElementById('modalTitle');
+      let desc = document.getElementById('modalDesc');
+
+      modal.style.display = 'flex';
+      if (win) {
+        title.innerText = "CLEARED!";
+        title.style.color = "#00ff00";
+        desc.innerText = "Field sweep complete.";
+        if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('win');
+      } else {
+        title.innerText = "DETONATION";
+        title.style.color = "#ff0000";
+        desc.innerText = "Mission Failed.";
+        if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('loss');
+      }
+    }
+
+    resetGame();
+  </script>
+</body>
+
+</html>

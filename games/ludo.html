@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ludo Pro AI | GameHub Pro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .game-wrapper {
+            max-width: 1000px;
+            margin: 40px auto;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+        }
+
+        .stats-bar {
+            padding: 15px 40px;
+            background: rgba(124, 77, 255, 0.1);
+            display: flex;
+            justify-content: space-around;
+            font-size: 14px;
+            font-weight: 800;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .stat-val {
+            color: var(--accent-secondary);
+            margin-left: 5px;
+        }
+
+        .game-body {
+            padding: 40px;
+            display: flex;
+            gap: 40px;
+            justify-content: center;
+            align-items: flex-start;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .board-container {
+            position: relative;
+            width: 500px;
+            height: 500px;
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+            padding: 10px;
+        }
+
+        /* Ludo Layout */
+        .ludo-board {
+            display: grid;
+            grid-template-columns: repeat(15, 1fr);
+            grid-template-rows: repeat(15, 1fr);
+            width: 100%;
+            height: 100%;
+            gap: 1px;
+            background: #cbd5e1;
+        }
+
+        .sq {
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sq.red {
+            background: #fee2e2;
+            border: 1px solid #fecaca;
+        }
+
+        .sq.blue {
+            background: #dbeafe;
+            border: 1px solid #bfdbfe;
+        }
+
+        .sq.green {
+            background: #dcfce7;
+            border: 1px solid #bbf7d0;
+        }
+
+        .sq.yellow {
+            background: #fef9c3;
+            border: 1px solid #fef08a;
+        }
+
+        /* Large Base Areas */
+        .base-plate {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            grid-column: span 6;
+            grid-row: span 6;
+            border: 2px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .base-plate.red {
+            background: #ff4d4d;
+        }
+
+        .base-plate.blue {
+            background: #4d94ff;
+        }
+
+        .base-plate.green {
+            background: #2ecc71;
+        }
+
+        .base-plate.yellow {
+            background: #f1c40f;
+        }
+
+        .base-inner {
+            width: 75%;
+            height: 75%;
+            background: #fff;
+            border-radius: 8px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 15px;
+            padding: 15px;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .base-slot {
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            margin: auto;
+            position: relative;
+            box-shadow: inset 0 4px 8px rgba(0, 0, 0, 0.15);
+            border: 3px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .base-plate.red .base-slot {
+            background: #ff4d4d;
+        }
+
+        .base-plate.blue .base-slot {
+            background: #4d94ff;
+        }
+
+        .base-plate.green .base-slot {
+            background: #2ecc71;
+        }
+
+        .base-plate.yellow .base-slot {
+            background: #f1c40f;
+        }
+
+        .sq.safe::before {
+            content: '★';
+            font-size: 20px;
+            color: rgba(0, 0, 0, 0.1);
+            position: absolute;
+        }
+
+        .sq.safe.red::before {
+            color: rgba(255, 77, 77, 0.3);
+        }
+
+        .sq.safe.blue::before {
+            color: rgba(77, 148, 255, 0.3);
+        }
+
+        .sq.safe.green::before {
+            color: rgba(46, 204, 113, 0.3);
+        }
+
+        .sq.safe.yellow::before {
+            color: rgba(241, 196, 15, 0.3);
+        }
+
+        .sq.start-arrow::after {
+            content: '➔';
+            position: absolute;
+            font-size: 16px;
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .sq.red.start-arrow::after {
+            transform: rotate(0deg);
+        }
+
+        .sq.blue.start-arrow::after {
+            transform: rotate(90deg);
+        }
+
+        .sq.yellow.start-arrow::after {
+            transform: rotate(180deg);
+        }
+
+        .sq.green.start-arrow::after {
+            transform: rotate(-90deg);
+        }
+
+        .center-hub {
+            grid-column: 7/10;
+            grid-row: 7/10;
+            background: #fff;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid #cbd5e1;
+        }
+
+        .triangle {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+        }
+
+        .tri-red {
+            background: #ff4d4d;
+            clip-path: polygon(0 0, 50% 50%, 0 100%);
+        }
+
+        .tri-green {
+            background: #2ecc71;
+            clip-path: polygon(0 0, 50% 50%, 100% 0);
+        }
+
+        .tri-yellow {
+            background: #f1c40f;
+            clip-path: polygon(100% 0, 50% 50%, 100% 100%);
+        }
+
+        .tri-blue {
+            background: #4d94ff;
+            clip-path: polygon(0 100%, 50% 50%, 100% 100%);
+        }
+
+        .center-hub::after {
+            content: '';
+            position: absolute;
+            inset: 20%;
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            z-index: 10;
+        }
+
+        /* Piece */
+        .piece {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.9);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4), inset 0 -4px 4px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+            z-index: 100;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: absolute;
+            background-image: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.4), transparent);
+        }
+
+        .piece.red {
+            background: radial-gradient(circle at 30% 30%, #ff6b6b, #ef4444);
+        }
+
+        .piece.blue {
+            background: radial-gradient(circle at 30% 30%, #60a5fa, #3b82f6);
+        }
+
+        .piece.green {
+            background: radial-gradient(circle at 30% 30%, #4ade80, #22c55e);
+        }
+
+        .piece.yellow {
+            background: radial-gradient(circle at 30% 30%, #facc15, #eab308);
+        }
+
+        .p-core {
+            width: 60%;
+            height: 60%;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            margin: auto;
+            pointer-events: none;
+        }
+
+        .piece.active {
+            animation: bounce 0.6s infinite alternate;
+            scale: 1.2;
+            border-color: #fff;
+            z-index: 200;
+        }
+
+        @keyframes bounce {
+            from {
+                transform: translateY(0);
+            }
+
+            to {
+                transform: translateY(-8px);
+            }
+        }
+
+        .dice-box {
+            background: var(--card-bg);
+            border: 2px solid var(--glass-border);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        .dice-box.red {
+            border-color: #ef4444;
+            box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
+        }
+
+        .dice-box.blue {
+            border-color: #3b82f6;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .dice-box.green {
+            border-color: #22c55e;
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+        }
+
+        .dice-box.yellow {
+            border-color: #eab308;
+            box-shadow: 0 0 20px rgba(234, 179, 8, 0.4);
+        }
+
+        .dice {
+            width: 70px;
+            height: 70px;
+            background: #fff;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 800;
+            color: #1e293b;
+            margin: 0 auto 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            cursor: pointer;
+        }
+
+        .dice.rolling {
+            animation: roll 0.1s infinite;
+        }
+
+        @keyframes roll {
+            0% {
+                transform: rotate(0) scale(0.9);
+            }
+
+            50% {
+                transform: rotate(180deg) scale(1.1);
+            }
+
+            100% {
+                transform: rotate(360deg) scale(0.9);
+            }
+        }
+
+        .base-plate.active-turn {
+            animation: base-pulse 1.5s infinite;
+            box-shadow: 0 0 40px currentColor;
+            z-index: 5;
+        }
+
+        @keyframes base-pulse {
+            0% {
+                opacity: 0.8;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 1;
+                transform: scale(1.02);
+            }
+
+            100% {
+                opacity: 0.8;
+                transform: scale(1);
+            }
+        }
+
+        .piece.is-movable {
+            cursor: pointer;
+            filter: brightness(1.3);
+            animation: piece-float 0.8s infinite;
+        }
+
+        @keyframes piece-float {
+            0% {
+                transform: translateY(0);
+            }
+
+            50% {
+                transform: translateY(-5px) scale(1.1);
+            }
+
+            100% {
+                transform: translateY(0);
+            }
+        }
+
+        .piece.moving {
+            z-index: 99;
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* --- PREMIUM GAME HEADER --- */
+        .game-header-premium {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100px;
+            z-index: 1000;
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            padding: 0 40px;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .header-inner {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .hub-back {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            text-decoration: none;
+            color: #fff;
+            pointer-events: auto;
+            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .hub-back:hover {
+            transform: translateX(-5px) scale(1.05);
+        }
+
+        .back-icon-wrap {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            transition: 0.3s;
+        }
+
+        .hub-back:hover .back-icon-wrap {
+            border-color: #7c4dff;
+            box-shadow: 0 0 20px rgba(124, 77, 255, 0.4);
+            color: #7c4dff;
+        }
+
+        .hub-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1;
+        }
+
+        .hub-small {
+            font-size: 12px;
+            font-weight: 800;
+            color: rgba(255, 255, 255, 0.5);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .hub-main {
+            font-size: 26px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            text-transform: uppercase;
+        }
+
+        .hub-main .accent {
+            color: #7c4dff;
+            text-shadow: 0 0 10px rgba(124, 77, 255, 0.5);
+        }
+
+        .game-title-badge {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 25px;
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            font-size: 18px;
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.7);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <div class="bg-glow-container">
+        <div class="glow-sphere sphere-1"></div>
+        <div class="glow-sphere sphere-2"></div>
+    </div>
+
+    <header class="game-header-premium">
+        <div class="header-inner">
+            <a href="../index.html" class="hub-back">
+                <div class="back-icon-wrap">
+                    <i data-lucide="arrow-left" style="width:28px; height:28px"></i>
+                </div>
+                <div class="hub-text">
+                    <span class="hub-small">Return to</span>
+                    <span class="hub-main">GameHub <span class="accent">Pro</span></span>
+                </div>
+            </a>
+            <div class="game-title-badge">
+                <span>LUDO PRO AI</span>
+            </div>
+        </div>
+    </header>
+
+    <div id="lobby" class="game-wrapper"
+        style="position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:1000; padding:40px; text-align:center;">
+        <h2 class="accent-text" style="margin-bottom:20px; font-size:32px;">LUDO PRO: COMMAND CENTER</h2>
+        <div style="margin-bottom:30px; display:flex; flex-direction:column; gap:15px;">
+            <p style="font-weight:800; color:rgba(255,255,255,0.6)">SELECT COMBATANTS</p>
+            <div id="player-config"
+                style="display:grid; grid-template-columns:1fr 1fr; gap:15px; max-width:400px; margin:auto;">
+                <div class="glass p-config active" data-color="red" data-type="human"
+                    style="padding:15px; border:1px solid #ef4444;">RED (YOU)</div>
+                <select class="glass p-type" data-color="blue"
+                    style="padding:15px; background:rgba(59,130,246,0.1); border-color:#3b82f6; color:#fff;">
+                    <option value="ai">BLUE (AI PRO)</option>
+                    <option value="human">BLUE (HUMAN)</option>
+                    <option value="none">BLUE (OFF)</option>
+                </select>
+                <select class="glass p-type" data-color="yellow"
+                    style="padding:15px; background:rgba(234,179,8,0.1); border-color:#eab308; color:#fff;">
+                    <option value="ai">YELLOW (AI PRO)</option>
+                    <option value="human">YELLOW (HUMAN)</option>
+                    <option value="none" selected>YELLOW (OFF)</option>
+                </select>
+                <select class="glass p-type" data-color="green"
+                    style="padding:15px; background:rgba(34,197,94,0.1); border-color:#22c55e; color:#fff;">
+                    <option value="ai">GREEN (AI PRO)</option>
+                    <option value="human">GREEN (HUMAN)</option>
+                    <option value="none" selected>GREEN (OFF)</option>
+                </select>
+            </div>
+        </div>
+        <button class="btn-primary" onclick="startGameFromLobby()" style="padding:15px 40px; font-size:18px;">INITIALIZE
+            SIMULATION</button>
+    </div>
+
+    <div id="game-container" style="display:none;">
+        <div class="game-wrapper">
+            <div class="stats-bar">
+                <span>COMMANDER: <span class="stat-val" id="turn">RED</span></span>
+                <span>SYSTEM: <span class="stat-val" id="status">AWAITING ROLL</span></span>
+                <span>MODE: <span class="stat-val" id="gameModeDisplay">MULTIPLAYER</span></span>
+            </div>
+
+            <div class="game-body">
+                <div class="board-container">
+                    <div class="ludo-board" id="board"></div>
+                </div>
+
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 20px;">
+                    <div class="dice-box">
+                        <div id="dice" class="dice">🎲</div>
+                        <button class="btn-primary" id="rollBtn" style="width: 100%;">ROLL NEURAL DICE</button>
+                    </div>
+
+                    <div class="glass" style="padding: 20px; border-radius: 15px;">
+                        <h4 style="margin: 0 0 15px; font-size: 14px;">FLEET STATUS</h4>
+                        <div id="fleet-stats"
+                            style="display: flex; flex-direction: column; gap: 10px; font-size: 12px; font-weight: 700;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="game-controls">
+                <button class="btn-primary" onclick="location.reload()">RE-INITIALIZE</button>
+                <button class="btn-secondary" onclick="goBack()">EXIT HUB</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/shared.js"></script>
+    <script>
+        lucide.createIcons();
+
+        const RED = 'red', BLUE = 'blue', GREEN = 'green', YELLOW = 'yellow';
+        let turn = RED;
+        let diceValue = 0;
+        let isRolling = false;
+        let canMove = false;
+        let sixesCount = 0;
+        let activePlayers = [RED];
+        let playerTypes = { red: 'human', blue: 'none', yellow: 'none', green: 'none' };
+
+        const pathPositions = {
+            red: [
+                [6, 1], [6, 2], [6, 3], [6, 4], [6, 5], [5, 6], [4, 6], [3, 6], [2, 6], [1, 6], [0, 6], [0, 7], [0, 8], [1, 8], [2, 8], [3, 8], [4, 8], [5, 8],
+                [6, 9], [6, 10], [6, 11], [6, 12], [6, 13], [6, 14], [7, 14], [8, 14], [8, 13], [8, 12], [8, 11], [8, 10], [8, 9], [9, 8], [10, 8], [11, 8], [12, 8], [13, 8], [14, 8],
+                [14, 7], [14, 6], [13, 6], [12, 6], [11, 6], [10, 6], [9, 6], [8, 5], [8, 4], [8, 3], [8, 2], [8, 1], [8, 0], [7, 0], [7, 1], [7, 2], [7, 3], [7, 4], [7, 5], [7, 6]
+            ],
+            blue: [], green: [], yellow: []
+        };
+
+        function rotatePath(path, steps) {
+            return path.map(p => {
+                let r = p[0], c = p[1];
+                for (let i = 0; i < steps; i++) {
+                    let nr = c;
+                    let nc = 14 - r;
+                    r = nr; c = nc;
+                }
+                return [r, c];
+            });
+        }
+        pathPositions.green = rotatePath(pathPositions.red, 1);
+        pathPositions.yellow = rotatePath(pathPositions.red, 2);
+        pathPositions.blue = rotatePath(pathPositions.red, 3);
+
+        const bases = {
+            red: [[1, 1], [1, 4], [4, 1], [4, 4]],
+            green: [[1, 10], [1, 13], [4, 10], [4, 13]],
+            yellow: [[10, 10], [10, 13], [13, 10], [13, 13]],
+            blue: [[10, 1], [10, 4], [13, 1], [13, 4]]
+        };
+
+        let pieces = {};
+
+        function startGameFromLobby() {
+            if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('click');
+            activePlayers = [RED];
+            playerTypes.red = 'human';
+            document.querySelectorAll('.p-type').forEach(sel => {
+                const color = sel.dataset.color;
+                const type = sel.value;
+                playerTypes[color] = type;
+                if (type !== 'none') activePlayers.push(color);
+            });
+
+            document.getElementById('lobby').style.display = 'none';
+            document.getElementById('game-container').style.display = 'block';
+            initGame();
+        }
+
+        function initGame() {
+            pieces = {};
+            activePlayers.forEach(c => {
+                pieces[c] = [0, 1, 2, 3].map(id => ({ id, state: 'base', pos: -1 }));
+            });
+
+            const boardEl = document.getElementById('board');
+            boardEl.innerHTML = '';
+
+            // Create cells (15x15)
+            for (let r = 0; r < 15; r++) {
+                for (let c = 0; c < 15; c++) {
+                    // Check if this position is a Base Plate start
+                    if ((r === 0 && c === 0) || (r === 0 && c === 9) || (r === 9 && c === 0) || (r === 9 && c === 9)) {
+                        const color = (r === 0 && c === 0) ? 'red' : (r === 0 && c === 9) ? 'green' : (r === 9 && c === 0) ? 'blue' : 'yellow';
+                        const plate = document.createElement('div');
+                        plate.className = `base-plate ${color}`;
+                        const inner = document.createElement('div'); // Changed from circle
+                        inner.className = 'base-inner';
+                        for (let i = 0; i < 4; i++) {
+                            const slot = document.createElement('div');
+                            slot.className = 'base-slot';
+                            slot.id = `slot-${color}-${i}`;
+                            inner.appendChild(slot);
+                        }
+                        plate.appendChild(inner);
+                        boardEl.appendChild(plate);
+                        continue;
+                    }
+
+                    // Skip if inside a base plate range (6x6)
+                    if ((r < 6 && c < 6) || (r < 6 && c > 8) || (r > 8 && c < 6) || (r > 8 && c > 8)) {
+                        continue;
+                    }
+
+                    if (r >= 6 && r <= 8 && c >= 6 && c <= 8) {
+                        if (r === 6 && c === 6) {
+                            const hub = document.createElement('div');
+                            hub.className = 'center-hub';
+                            hub.id = 'sq-7-7';
+                            hub.innerHTML = `
+                                <div class="triangle tri-red" id="home-red"></div>
+                                <div class="triangle tri-blue" id="home-blue"></div>
+                                <div class="triangle tri-green" id="home-green"></div>
+                                <div class="triangle tri-yellow" id="home-yellow"></div>
+                            `;
+                            boardEl.appendChild(hub);
+                        }
+                        continue;
+                    }
+
+                    const sq = document.createElement('div');
+                    sq.className = 'sq';
+                    sq.id = `sq-${r}-${c}`;
+
+                    // Standard Ludo Safe Spots
+                    const safeSpots = [
+                        { r: 6, c: 1, color: 'red' }, { r: 8, c: 2, color: 'red' },
+                        { r: 2, c: 8, color: 'blue' }, { r: 1, c: 6, color: 'blue' },
+                        { r: 8, c: 13, color: 'yellow' }, { r: 6, c: 12, color: 'yellow' },
+                        { r: 12, c: 6, color: 'green' }, { r: 13, r: 8, color: 'green' } // Fix typo r, c
+                    ];
+                    // Corrected Green second safe spot
+                    const greenSafe2 = { r: 13, c: 8, color: 'green' };
+
+                    const isSafe = (rr, cc) => {
+                        // Start Positions
+                        if (rr === 6 && cc === 1) return 'red';
+                        if (rr === 1 && cc === 8) return 'green';
+                        if (rr === 8 && cc === 13) return 'yellow';
+                        if (rr === 13 && cc === 6) return 'blue';
+                        // Safe Hubs
+                        if (rr === 8 && cc === 2) return 'red';
+                        if (rr === 2 && cc === 6) return 'green';
+                        if (rr === 6 && cc === 12) return 'yellow';
+                        if (rr === 12 && cc === 8) return 'blue';
+                        return null;
+                    };
+
+                    const safeColor = isSafe(r, c);
+                    if (safeColor) {
+                        sq.classList.add('safe', safeColor);
+                        // Start arrow logic
+                        if ((r === 6 && c === 1) || (r === 1 && c === 8) || (r === 8 && c === 13) || (r === 13 && c === 6)) {
+                            sq.classList.add('start-arrow');
+                        }
+                    }
+
+                    if (r === 7 && c > 0 && c < 6) sq.style.background = '#ff4d4d'; // Red path
+                    if (r === 7 && c > 8 && c < 14) sq.style.background = '#f1c40f'; // Yellow path
+                    if (c === 7 && r > 0 && r < 6) sq.style.background = '#2ecc71'; // Green path
+                    if (c === 7 && r > 8 && r < 14) sq.style.background = '#4d94ff'; // Blue path
+
+                    boardEl.appendChild(sq);
+                }
+            }
+            render();
+            updateStats();
+            document.getElementById('turn').textContent = turn.toUpperCase();
+        }
+
+        function render() {
+            const boardEl = document.getElementById('board');
+
+            // Turn Glow for Bases
+            document.querySelectorAll('.base-plate').forEach(bp => {
+                bp.classList.remove('active-turn');
+                if (bp.classList.contains(turn)) bp.classList.add('active-turn');
+            });
+
+            activePlayers.forEach(color => {
+                pieces[color].forEach(p => {
+                    let el = document.getElementById(`piece-${color}-${p.id}`);
+                    if (!el) {
+                        el = document.createElement('div');
+                        el.id = `piece-${color}-${p.id}`;
+                        el.className = `piece ${color}`;
+                        el.innerHTML = `<div class="p-core"></div>`;
+                    }
+
+                    if (turn === color && canMove && isMovable(color, p)) {
+                        el.classList.add('is-movable');
+                    } else {
+                        el.classList.remove('is-movable');
+                    }
+
+                    let target;
+                    if (p.state === 'base') {
+                        target = document.getElementById(`slot-${color}-${p.id}`);
+                    } else if (p.state === 'home') {
+                        target = document.getElementById(`home-${color}`);
+                    } else {
+                        const coords = pathPositions[color][p.pos];
+                        target = document.getElementById(`sq-${coords[0]}-${coords[1]}`);
+                    }
+
+                    if (target && el.parentElement !== target) {
+                        target.appendChild(el);
+                    }
+
+                    el.onclick = () => movePiece(color, p.id);
+                });
+            });
+
+            // Auto-stacking logic for overlapping pieces
+            document.querySelectorAll('.sq, .base-slot, .triangle, .center-hub').forEach(sq => {
+                const piecesInSq = sq.querySelectorAll('.piece');
+                if (piecesInSq.length > 1) {
+                    piecesInSq.forEach((p, i) => {
+                        const shift = (i - (piecesInSq.length - 1) / 2) * 5;
+                        p.style.transform = `translate(${shift}px, ${shift}px) scale(0.85)`;
+                        p.style.zIndex = i + 10;
+                    });
+                } else if (piecesInSq.length === 1) {
+                    piecesInSq[0].style.transform = '';
+                    piecesInSq[0].style.zIndex = 10;
+                }
+            });
+        }
+
+        function isMovable(color, p) {
+            if (p.state === 'home') return false;
+            if (p.state === 'base') {
+                return diceValue === 6;
+            }
+            if (p.pos + diceValue >= pathPositions[color].length) return false;
+            return true;
+        }
+
+        async function rollDice() {
+            if (isRolling || canMove) return;
+            isRolling = true;
+            if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('move');
+            const diceEl = document.getElementById('dice');
+            diceEl.classList.add('rolling');
+
+            await new Promise(r => setTimeout(r, 600));
+            diceValue = Math.floor(Math.random() * 6) + 1;
+            diceEl.textContent = diceValue;
+            diceEl.classList.remove('rolling');
+            isRolling = false;
+
+            if (diceValue === 6) {
+                sixesCount++;
+                if (sixesCount === 3) {
+                    document.getElementById('status').textContent = 'SYS: 3 SIXES - TURN REJECTED';
+                    sixesCount = 0;
+                    await new Promise(r => setTimeout(r, 1000));
+                    nextTurn();
+                    return;
+                }
+            }
+
+            const movables = pieces[turn].filter(p => isMovable(turn, p));
+            if (movables.length === 0) {
+                document.getElementById('status').textContent = 'SYS: NO MOVES';
+                await new Promise(r => setTimeout(r, 800));
+                nextTurn();
+            } else {
+                canMove = true;
+                document.getElementById('status').textContent = 'SYS: SELECT FLEET';
+                render();
+                if (playerTypes[turn] === 'ai') setTimeout(() => aiMove(), 600);
+            }
+        }
+
+        async function movePiece(color, id) {
+            if (turn !== color || !canMove) return;
+            const p = pieces[color][id];
+            if (!isMovable(color, p)) return;
+
+            canMove = false; // Internal lock
+            if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('click');
+
+            let landedHome = false;
+            if (p.state === 'base') {
+                p.state = 'path';
+                p.pos = 0;
+                render();
+                await new Promise(r => setTimeout(r, 200));
+            } else {
+                const steps = diceValue;
+                const el = document.getElementById(`piece-${color}-${id}`);
+                for (let i = 0; i < steps; i++) {
+                    p.pos++;
+                    el.classList.add('moving');
+                    if (p.pos === pathPositions[color].length - 1) {
+                        p.state = 'home';
+                        landedHome = true;
+                        render();
+                        break;
+                    }
+                    render();
+                    if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('move');
+                    await new Promise(r => setTimeout(r, 150));
+                }
+                setTimeout(() => el.classList.remove('moving'), 200);
+            }
+
+            const captured = checkCapture(color, pieces[color][id]);
+            updateStats();
+
+            if (pieces[color].every(p => p.state === 'home')) {
+                if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('win');
+                alert(`PLAYER ${color.toUpperCase()} CONQUERED THE SIMULATION!`);
+                location.reload();
+            }
+
+            if (captured || diceValue === 6 || landedHome) {
+                document.getElementById('status').textContent = 'COMMAND: EXTRA TURN';
+                canMove = false; // Stay false until next roll or logic
+                if (playerTypes[turn] === 'ai') setTimeout(() => rollDice(), 800);
+                else canMove = false; // Wait for roll button (which sets canMove to true after roll)
+            } else {
+                sixesCount = 0;
+                nextTurn();
+            }
+            render();
+        }
+
+        function checkCapture(color, p) {
+            if (p.state !== 'path' || p.pos >= 51) return false;
+            const myCoords = pathPositions[color][p.pos];
+            const targetSq = document.getElementById(`sq-${myCoords[0]}-${myCoords[1]}`);
+            if (targetSq && targetSq.classList.contains('safe')) return false;
+
+            let captured = false;
+            activePlayers.forEach(c => {
+                if (c === color) return;
+                pieces[c].forEach(op => {
+                    if (op.state === 'path') {
+                        const oc = pathPositions[c][op.pos];
+                        if (myCoords[0] === oc[0] && myCoords[1] === oc[1]) {
+                            op.state = 'base'; op.pos = -1; captured = true;
+                            if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('loss');
+                        }
+                    }
+                });
+            });
+            return captured;
+        }
+
+        function aiMove() {
+            const movables = pieces[turn].filter(p => isMovable(turn, p));
+            if (movables.length === 0) return nextTurn();
+
+            // PRO AI Logic
+            // Priority Score:
+            // Kill Opponent: +100
+            // Enter Home: +80
+            // Escape Threat: +60
+            // Move from Base: +40
+            // Land on Safe Spot: +30
+            // Safe Move: +10
+            // Risky Move: -20
+
+            let bestMove = null;
+            let maxScore = -Infinity;
+
+            movables.forEach(p => {
+                let score = 0;
+                const currPos = p.state === 'base' ? -1 : p.pos;
+                const nextPosId = currPos === -1 ? 0 : currPos + diceValue;
+
+                // 1. Move from Base
+                if (currPos === -1) score += 40;
+
+                // 2. Enter Home
+                if (nextPosId === pathPositions[turn].length - 1) score += 80;
+
+                // simulate next position coords
+                const nextCoords = pathPositions[turn][nextPosId];
+
+                // 3. Kill Opponent
+                let canKill = false;
+                activePlayers.forEach(c => {
+                    if (c !== turn) pieces[c].forEach(op => {
+                        if (op.state === 'path') {
+                            const opCoords = pathPositions[c][op.pos];
+                            if (opCoords[0] === nextCoords[0] && opCoords[1] === nextCoords[1]) {
+                                // Check if safe spot
+                                const sq = document.getElementById(`sq-${nextCoords[0]}-${nextCoords[1]}`);
+                                if (!sq.classList.contains('safe')) {
+                                    score += 100;
+                                    canKill = true;
+                                }
+                            }
+                        }
+                    })
+                });
+
+                // 4. Land on Safe Spot
+                if (isSafeSpot(nextCoords)) score += 30;
+
+                // 5. Threat Analysis (Current Spot vs Next Spot)
+                if (p.state === 'path' && !isSafeSpot(pathPositions[turn][currPos])) {
+                    if (isUnderThreat(turn, currPos)) score += 60; // Escape!
+                }
+
+                if (!isSafeSpot(nextCoords) && isUnderThreatPos(turn, nextCoords)) {
+                    score -= 50; // Moving into danger
+                } else {
+                    score += 10; // General advance
+                }
+
+                // Random drift for variation
+                score += Math.random() * 5;
+
+                if (score > maxScore) {
+                    maxScore = score;
+                    bestMove = p;
+                }
+            });
+
+            movePiece(turn, bestMove.id);
+        }
+
+        function isSafeSpot(coords) {
+            const sq = document.getElementById(`sq-${coords[0]}-${coords[1]}`);
+            return sq && sq.classList.contains('safe');
+        }
+
+        function isUnderThreat(color, pos) {
+            // Check if any opponent is behind us within striking range (1-6)
+            // Complex to calc exact relative path, simplifying:
+            // Just check if any opponent is nearby? 
+            // For Ludo Pro, we assume local proximity check on grid
+            const myCoords = pathPositions[color][pos];
+            return checkProximityThreat(myCoords);
+        }
+
+        function isUnderThreatPos(color, coords) {
+            return checkProximityThreat(coords);
+        }
+
+        function checkProximityThreat(coords) {
+            let threatened = false;
+            activePlayers.forEach(c => {
+                if (c !== turn) pieces[c].forEach(op => {
+                    if (op.state === 'path') {
+                        const opC = pathPositions[c][op.pos];
+                        // If they are on same grid pos, that's a threat (unless safe)
+                        // Actually in Ludo, threat is if they are BEHIND us. 
+                        // Simplified: random 'paranoia' for now as grid calc is heavy
+                        if (Math.abs(opC[0] - coords[0]) + Math.abs(opC[1] - coords[1]) < 3) threatened = true;
+                    }
+                })
+            });
+            return threatened;
+        }
+
+        function nextTurn() {
+            const idx = activePlayers.indexOf(turn);
+            turn = activePlayers[(idx + 1) % activePlayers.length];
+
+            // Update turn UI
+            const turnEl = document.getElementById('turn');
+            turnEl.textContent = turn.toUpperCase();
+            turnEl.style.color = turn === RED ? '#ef4444' : turn === BLUE ? '#3b82f6' : turn === GREEN ? '#22c55e' : '#eab308';
+
+            const diceBox = document.querySelector('.dice-box');
+            diceBox.className = 'dice-box ' + turn;
+
+            document.getElementById('status').textContent = 'COMMAND: AWAITING ROLL';
+            canMove = false;
+            render();
+            if (playerTypes[turn] === 'ai') setTimeout(() => rollDice(), 800);
+        }
+
+        function updateStats() {
+            const fleet = document.getElementById('fleet-stats');
+            fleet.innerHTML = activePlayers.map(c => `
+                <div style="display:flex; justify-content:space-between; color:${c === RED ? '#ef4444' : c === BLUE ? '#3b82f6' : c === GREEN ? '#22c55e' : '#eab308'}">
+                    <span>${c.toUpperCase()} (${playerTypes[c]})</span>
+                    <span>${pieces[c].filter(p => p.state === 'home').length}/4 CONQUERED</span>
+                </div>
+            `).join('');
+        }
+
+        function showHelp() {
+            GameHubHelp.show("LUDO PRO: COMMAND PROTOCOLS", `
+                1. **INITIALIZE**: Roll a 6 to deploy a piece from the BASE to the START square.<br><br>
+                2. **ASSAULT**: Land on an opponent's square to capture them and send them back to base. Captures grant an EXTRA TURN.<br><br>
+                3. **SAFE ZONES**: Squares marked with arrows are safe. No captures can occur here.<br><br>
+                4. **EXTRA TURNS**: Rolling a 6 or reaching the HOME HUB with a piece grants an additional turn.<br><br>
+                5. **VICTORY**: Navigate all 4 pieces to your color-coded HOME triangle in the center hub.
+            `);
+        }
+
+        document.getElementById('rollBtn').onclick = rollDice;
+        function goBack() { window.location.href = '../index.html'; }
+    </script>
+</body>
+
+</html>

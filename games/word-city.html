@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Word City | GameHub Pro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .game-wrapper {
+            max-width: 700px;
+            margin: 40px auto;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+        }
+
+        .stats-bar {
+            padding: 15px 40px;
+            background: rgba(124, 77, 255, 0.1);
+            display: flex;
+            justify-content: space-around;
+            font-size: 14px;
+            font-weight: 800;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .stat-val {
+            color: var(--accent-secondary);
+            margin-left: 5px;
+        }
+
+        .game-body {
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            gap: 20px;
+            position: relative;
+        }
+
+        canvas {
+            background: linear-gradient(180deg, #0a0a0f, #1a1a2e);
+            border-radius: 12px;
+            border: 2px solid var(--glass-border);
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+            cursor: crosshair;
+        }
+
+        .word-list {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            min-width: 150px;
+        }
+
+        .word-list h3 {
+            margin: 0 0 15px 0;
+            color: var(--accent-primary);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .word-list ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .word-list li {
+            padding: 8px;
+            margin: 5px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .word-list li.found {
+            background: rgba(0, 229, 255, 0.2);
+            color: var(--accent-secondary);
+            text-decoration: line-through;
+        }
+
+        .game-controls {
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <div class="bg-glow-container">
+        <div class="glow-sphere sphere-1"></div>
+        <div class="glow-sphere sphere-2"></div>
+    </div>
+
+    <header class="main-header" style="position: relative; background: transparent; border: none;">
+        <div class="nav-container">
+            <a href="../index.html" class="logo" style="text-decoration: none; color: inherit;">
+                <i data-lucide="arrow-left"></i>
+                <span>BACK TO <span class="accent-text">HUB</span></span>
+            </a>
+            <h2 style="font-weight:800; letter-spacing:-1px">DATA WORD CITY</h2>
+        </div>
+    </header>
+
+    <div class="game-wrapper">
+        <div class="stats-bar">
+            <span>SCORE: <span class="stat-val" id="score">0</span></span>
+            <span>FOUND: <span class="stat-val" id="found">0/10</span></span>
+            <span>TIME: <span class="stat-val" id="time">120</span></span>
+        </div>
+
+        <div class="game-body">
+            <canvas id="canvas" width="500" height="500"></canvas>
+            <div class="word-list">
+                <h3>TARGET WORDS</h3>
+                <ul id="wordList"></ul>
+            </div>
+        </div>
+
+        <div class="game-controls">
+            <button class="btn-primary" onclick="resetGame()">NEW MATRIX</button>
+            <button class="btn-secondary" onclick="showHint()">HINT</button>
+            <button class="btn-secondary" onclick="goBack()">EXIT</button>
+        </div>
+    </div>
+
+    <script src="../js/shared.js"></script>
+    <script>
+        lucide.createIcons();
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+        const SIZE = 12;
+        const CELL = W / SIZE;
+
+        let grid = [];
+        let words = [];
+        let foundWords = new Set();
+        let score = 0;
+        let timeLeft = 120;
+        let selecting = false;
+        let selected = [];
+        let wordPositions = [];
+
+        const WORD_BANK = [
+            'CYBER', 'DATA', 'CODE', 'HACK', 'BYTE', 'LINK', 'NODE', 'CORE',
+            'SYNC', 'GRID', 'NEON', 'WAVE', 'FLUX', 'ECHO', 'PULSE', 'MATRIX'
+        ];
+
+        function resetGame() {
+            grid = Array(SIZE).fill().map(() => Array(SIZE).fill(''));
+            words = [];
+            foundWords = new Set();
+            wordPositions = [];
+            score = 0;
+            timeLeft = 120;
+            selected = [];
+            selecting = false;
+
+            // Select 10 random words
+            const shuffled = [...WORD_BANK].sort(() => Math.random() - 0.5);
+            words = shuffled.slice(0, 10);
+
+            // Place words in grid
+            words.forEach(word => placeWord(word));
+
+            // Fill empty cells
+            for (let y = 0; y < SIZE; y++) {
+                for (let x = 0; x < SIZE; x++) {
+                    if (!grid[y][x]) {
+                        grid[y][x] = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+                    }
+                }
+            }
+
+            updateUI();
+            draw();
+
+            if (typeof GameHubAudio !== 'undefined') GameHubAudio.playMusic();
+
+            if (window.timer) clearInterval(window.timer);
+            window.timer = setInterval(() => {
+                timeLeft--;
+                document.getElementById('time').textContent = timeLeft;
+                if (timeLeft <= 0) endGame();
+            }, 1000);
+        }
+
+        function placeWord(word) {
+            const directions = [
+                { dx: 1, dy: 0 },   // horizontal
+                { dx: 0, dy: 1 },   // vertical
+                { dx: 1, dy: 1 },   // diagonal down-right
+                { dx: 1, dy: -1 }   // diagonal up-right
+            ];
+
+            let placed = false;
+            let attempts = 0;
+
+            while (!placed && attempts < 100) {
+                const dir = directions[Math.floor(Math.random() * directions.length)];
+                const startX = Math.floor(Math.random() * SIZE);
+                const startY = Math.floor(Math.random() * SIZE);
+
+                if (canPlace(word, startX, startY, dir.dx, dir.dy)) {
+                    const positions = [];
+                    for (let i = 0; i < word.length; i++) {
+                        const x = startX + i * dir.dx;
+                        const y = startY + i * dir.dy;
+                        grid[y][x] = word[i];
+                        positions.push({ x, y });
+                    }
+                    wordPositions.push({ word, positions });
+                    placed = true;
+                }
+                attempts++;
+            }
+        }
+
+        function canPlace(word, startX, startY, dx, dy) {
+            for (let i = 0; i < word.length; i++) {
+                const x = startX + i * dx;
+                const y = startY + i * dy;
+
+                if (x < 0 || x >= SIZE || y < 0 || y >= SIZE) return false;
+                if (grid[y][x] && grid[y][x] !== word[i]) return false;
+            }
+            return true;
+        }
+
+        function getCell(mx, my) {
+            const rect = canvas.getBoundingClientRect();
+            const x = Math.floor((mx - rect.left) / CELL);
+            const y = Math.floor((my - rect.top) / CELL);
+            if (x >= 0 && x < SIZE && y >= 0 && y < SIZE) return { x, y };
+            return null;
+        }
+
+        function checkWord() {
+            if (selected.length < 3) return;
+
+            const word = selected.map(c => grid[c.y][c.x]).join('');
+            const reversed = word.split('').reverse().join('');
+
+            if (words.includes(word) && !foundWords.has(word)) {
+                foundWords.add(word);
+                score += word.length * 20;
+                if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('win');
+                updateUI();
+                if (foundWords.size === words.length) winGame();
+            } else if (words.includes(reversed) && !foundWords.has(reversed)) {
+                foundWords.add(reversed);
+                score += reversed.length * 20;
+                if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('win');
+                updateUI();
+                if (foundWords.size === words.length) winGame();
+            } else if (selected.length >= 3) {
+                if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('click');
+            }
+        }
+
+        function showHint() {
+            const unfound = words.filter(w => !foundWords.has(w));
+            if (unfound.length > 0) {
+                const word = unfound[0];
+                const pos = wordPositions.find(wp => wp.word === word);
+                if (pos) {
+                    // Highlight first letter briefly
+                    const { x, y } = pos.positions[0];
+                    ctx.fillStyle = 'rgba(255, 234, 0, 0.5)';
+                    ctx.fillRect(x * CELL, y * CELL, CELL, CELL);
+                    setTimeout(draw, 1000);
+                    if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('click');
+                }
+            }
+        }
+
+        function draw() {
+            ctx.fillStyle = '#0a0a0f';
+            ctx.fillRect(0, 0, W, H);
+
+            // Grid lines
+            ctx.strokeStyle = 'rgba(124, 77, 255, 0.2)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= SIZE; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * CELL, 0);
+                ctx.lineTo(i * CELL, H);
+                ctx.stroke();
+                ctx.beginPath();
+                ctx.moveTo(0, i * CELL);
+                ctx.lineTo(W, i * CELL);
+                ctx.stroke();
+            }
+
+            // Letters
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 20px Inter';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            for (let y = 0; y < SIZE; y++) {
+                for (let x = 0; x < SIZE; x++) {
+                    ctx.fillText(grid[y][x], x * CELL + CELL / 2, y * CELL + CELL / 2);
+                }
+            }
+
+            // Selection
+            if (selected.length > 0) {
+                ctx.fillStyle = 'rgba(0, 229, 255, 0.3)';
+                selected.forEach(c => {
+                    ctx.fillRect(c.x * CELL, c.y * CELL, CELL, CELL);
+                });
+
+                ctx.strokeStyle = '#00e5ff';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(selected[0].x * CELL + CELL / 2, selected[0].y * CELL + CELL / 2);
+                for (let i = 1; i < selected.length; i++) {
+                    ctx.lineTo(selected[i].x * CELL + CELL / 2, selected[i].y * CELL + CELL / 2);
+                }
+                ctx.stroke();
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('found').textContent = `${foundWords.size}/${words.length}`;
+
+            const list = document.getElementById('wordList');
+            list.innerHTML = '';
+            words.forEach(word => {
+                const li = document.createElement('li');
+                li.textContent = word;
+                if (foundWords.has(word)) li.classList.add('found');
+                list.appendChild(li);
+            });
+        }
+
+        function winGame() {
+            clearInterval(window.timer);
+            if (typeof GameHubAudio !== 'undefined') GameHubAudio.stopMusic();
+            GameHubStats.reportScore('word-city', score + timeLeft * 10);
+            alert(`MATRIX DECODED! Score: ${score + timeLeft * 10}`);
+        }
+
+        function endGame() {
+            clearInterval(window.timer);
+            if (typeof GameHubAudio !== 'undefined') {
+                GameHubAudio.play('loss');
+                GameHubAudio.stopMusic();
+            }
+            GameHubStats.reportScore('word-city', score);
+            alert(`TIME EXPIRED! Score: ${score}`);
+        }
+
+        canvas.addEventListener('mousedown', e => {
+            const cell = getCell(e.clientX, e.clientY);
+            if (cell) {
+                selecting = true;
+                selected = [cell];
+                draw();
+            }
+        });
+
+        canvas.addEventListener('mousemove', e => {
+            if (!selecting) return;
+            const cell = getCell(e.clientX, e.clientY);
+            if (cell) {
+                const last = selected[selected.length - 1];
+                const dx = Math.abs(cell.x - last.x);
+                const dy = Math.abs(cell.y - last.y);
+                if ((dx <= 1 && dy <= 1) && !selected.some(c => c.x === cell.x && c.y === cell.y)) {
+                    selected.push(cell);
+                    draw();
+                }
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (selecting) {
+                checkWord();
+                selected = [];
+                selecting = false;
+                draw();
+            }
+        });
+
+        function goBack() {
+            if (typeof GameHubAudio !== 'undefined') GameHubAudio.stopMusic();
+            window.location.href = '../index.html';
+        }
+
+        resetGame();
+    </script>
+</body>
+
+</html>

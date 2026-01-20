@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Hangman: Word Duel</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=JetBrains+Mono:wght@700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #00FF9C;
+            --accent: #FF3D00;
+            --bg: #0A0A0A;
+            --glass: rgba(255, 255, 255, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .premium-header {
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: #fff;
+            font-weight: 800;
+        }
+
+        .game-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 60px;
+            padding: 40px;
+        }
+
+        .visual-area {
+            width: 300px;
+            height: 400px;
+            position: relative;
+            border-bottom: 8px solid #333;
+        }
+
+        .gallows-part {
+            position: absolute;
+            background: #333;
+            opacity: 0;
+            transition: 0.3s;
+        }
+
+        .p1 {
+            bottom: 0;
+            left: 20px;
+            width: 8px;
+            height: 400px;
+        }
+
+        .p2 {
+            top: 0;
+            left: 20px;
+            width: 200px;
+            height: 8px;
+        }
+
+        .p3 {
+            top: 0;
+            left: 212px;
+            width: 8px;
+            height: 50px;
+        }
+
+        .gallows-part.show {
+            opacity: 1;
+        }
+
+        .hangman-svg {
+            position: absolute;
+            top: 50px;
+            left: 162px;
+            width: 100px;
+            height: 250px;
+        }
+
+        .man-part {
+            fill: none;
+            stroke: var(--primary);
+            stroke-width: 4;
+            stroke-linecap: round;
+            opacity: 0;
+            transition: 0.5s;
+            filter: drop-shadow(0 0 5px var(--primary));
+        }
+
+        .man-part.show {
+            opacity: 1;
+        }
+
+        .content-area {
+            max-width: 600px;
+            text-align: center;
+        }
+
+        .word-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 48px;
+            letter-spacing: 15px;
+            margin-bottom: 40px;
+            color: var(--primary);
+        }
+
+        .keyboard {
+            display: grid;
+            grid-template-columns: repeat(9, 1fr);
+            gap: 10px;
+        }
+
+        .key {
+            background: var(--glass);
+            padding: 15px 5px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            cursor: pointer;
+            transition: 0.3s;
+            font-weight: 900;
+            font-size: 18px;
+        }
+
+        .key:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary);
+            transform: translateY(-3px);
+        }
+
+        .key.used {
+            opacity: 0.2;
+            pointer-events: none;
+        }
+
+        .key.correct {
+            background: rgba(0, 255, 156, 0.2);
+            border-color: var(--primary);
+        }
+
+        .key.wrong {
+            background: rgba(255, 61, 0, 0.2);
+            border-color: var(--accent);
+        }
+
+        .msg-pop.show {
+            opacity: 1;
+            top: 100px;
+        }
+
+        #matrix-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+
+        .hint-btn {
+            background: rgba(0, 255, 156, 0.1);
+            border: 1px solid var(--primary);
+            color: var(--primary);
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+            font-weight: 800;
+            transition: 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .hint-btn:hover:not(:disabled) {
+            background: var(--primary);
+            color: #000;
+            box-shadow: 0 0 20px var(--primary);
+            transform: scale(1.05);
+        }
+
+        .hint-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        @keyframes glitch {
+            0% {
+                transform: translate(0);
+            }
+
+            20% {
+                transform: translate(-2px, 2px);
+                color: var(--accent);
+            }
+
+            40% {
+                transform: translate(2px, -2px);
+                color: var(--primary);
+            }
+
+            100% {
+                transform: translate(0);
+            }
+        }
+
+        .glitch {
+            animation: glitch 0.3s infinite alternate;
+            text-shadow: 2px 0 var(--accent), -2px 0 var(--primary);
+        }
+
+        @keyframes glitch {
+            0% {
+                transform: skew(0deg);
+            }
+
+            20% {
+                transform: skew(2deg);
+            }
+
+            40% {
+                transform: skew(-2deg);
+            }
+
+            60% {
+                transform: skew(1deg);
+            }
+
+            80% {
+                transform: skew(-1deg);
+            }
+
+            100% {
+                transform: skew(0deg);
+            }
+        }
+
+        #overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 200;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: #000;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-weight: 900;
+            cursor: pointer;
+            margin-top: 20px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="matrix-bg"></canvas>
+    <header class="premium-header">
+        <a href="../index.html" class="back-btn"><i data-lucide="arrow-left"></i><span>BACK</span></a>
+        <div style="font-weight: 900; font-size: 24px; color: var(--primary);">CYBER <span
+                style="color: #fff;">HANGMAN</span></div>
+        <div style="width: 80px;"></div>
+    </header>
+
+    <div class="game-area">
+        <div class="visual-area">
+            <div class="gallows-part p1 show"></div>
+            <div class="gallows-part p2 show"></div>
+            <div class="gallows-part p3 show"></div>
+            <svg class="hangman-svg" viewBox="0 0 100 250">
+                <circle class="man-part" id="part-0" cx="50" cy="30" r="25" />
+                <line class="man-part" id="part-1" x1="50" y1="55" x2="50" y2="150" />
+                <line class="man-part" id="part-2" x1="50" y1="70" x2="10" y2="120" />
+                <line class="man-part" id="part-3" x1="50" y1="70" x2="90" y2="120" />
+                <line class="man-part" id="part-4" x1="50" y1="150" x2="20" y2="230" />
+                <line class="man-part" id="part-5" x1="50" y1="150" x2="80" y2="230" />
+            </svg>
+        </div>
+
+        <div class="content-area">
+            <div class="word-display" id="word">_ _ _ _ _ _</div>
+            <div class="keyboard" id="keyboard"></div>
+            <button class="hint-btn" id="hint-btn" onclick="useHint()">DECRYPT HINT</button>
+        </div>
+    </div>
+
+    <div id="overlay">
+        <h1 style="font-size: 64px;" id="status">YOU ESCAPED!</h1>
+        <p style="font-size: 24px;">The word was: <span id="revealed-word" style="color: var(--primary);">CODE</span>
+        </p>
+        <button class="btn" onclick="location.reload()">NEW CHALLENGE</button>
+    </div>
+
+    <script>
+        const WORDS = [
+            { w: "JAVASCRIPT", h: "The language of the web." },
+            { w: "FIREWALL", h: "Security system for networks." },
+            { w: "DATABASE", h: "Stored collection of data." },
+            { w: "ALGORITHM", h: "A process or set of rules." },
+            { w: "ENCRYPTION", h: "Converting data into code." },
+            { w: "MAINFRAME", h: "A large high-speed computer." },
+            { w: "NETWORK", h: "Connected computers." },
+            { w: "SATURN", h: "Ringed planet of the solar system." },
+            { w: "QUANTUM", h: "Physics of the very small." }
+        ];
+        let wordData = WORDS[Math.floor(Math.random() * WORDS.length)];
+        let targetWord = wordData.w;
+        let guessedLetters = [];
+        let mistakes = 0;
+        const maxMistakes = 6;
+        let hintsLeft = 2;
+
+        function speak(text) {
+            // Voice disabled
+        }
+
+        function init() {
+            initMatrix();
+            renderWord();
+            renderKeyboard();
+            updateHintUI();
+            lucide.createIcons();
+            speak("SYSTEMS ONLINE. COMMENCE DECRYPTION.");
+        }
+
+        function updateHintUI() {
+            const btn = document.getElementById('hint-btn');
+            btn.innerText = `DECRYPT HINT (${hintsLeft} LEFT)`;
+            if (hintsLeft <= 0) btn.disabled = true;
+        }
+
+        function initMatrix() {
+            const canvas = document.getElementById('matrix-bg');
+            const ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            const letters = "0101010101010101";
+            const fontSize = 16;
+            const columns = canvas.width / fontSize;
+            const drops = Array(Math.floor(columns)).fill(1);
+
+            function draw() {
+                ctx.fillStyle = "rgba(0, 0, 0, 0.05)";
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "#00FF9C";
+                ctx.font = fontSize + "px monospace";
+                for (let i = 0; i < drops.length; i++) {
+                    const text = letters.charAt(Math.floor(Math.random() * letters.length));
+                    ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                    if (drops[i] * fontSize > canvas.height && Math.random() > 0.975) drops[i] = 0;
+                    drops[i]++;
+                }
+            }
+            setInterval(draw, 33);
+        }
+
+        function renderWord() {
+            const display = targetWord.split('').map(l => guessedLetters.includes(l) ? l : "_").join(" ");
+            document.getElementById('word').innerText = display;
+
+            if (!display.includes("_")) endGame(true);
+        }
+
+        function renderKeyboard() {
+            const kb = document.getElementById('keyboard');
+            const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split('');
+            letters.forEach(l => {
+                const b = document.createElement('div');
+                b.className = 'key';
+                b.innerText = l;
+                b.onclick = () => handleGuess(l, b);
+                kb.appendChild(b);
+            });
+        }
+
+        function handleGuess(letter, btn) {
+            if (guessedLetters.includes(letter)) return;
+            guessedLetters.push(letter);
+            btn.classList.add('used');
+
+            if (targetWord.includes(letter)) {
+                btn.classList.add('correct');
+                speak("MATCH FOUND.");
+                renderWord();
+            } else {
+                btn.classList.add('wrong');
+                const p = document.getElementById(`part-${mistakes}`);
+                if (p) p.classList.add('show');
+                mistakes++;
+                document.getElementById('word').classList.add('glitch');
+                setTimeout(() => document.getElementById('word').classList.remove('glitch'), 500);
+                speak("ACCESS DENIED.");
+                if (mistakes >= maxMistakes) endGame(false);
+            }
+        }
+
+        function useHint() {
+            if (hintsLeft <= 0) return;
+            hintsLeft--;
+            updateHintUI();
+            speak("DECRYPTING HINT. THE HINT IS: " + wordData.h);
+            const hintBox = document.createElement('div');
+            hintBox.style.color = 'var(--primary)';
+            hintBox.style.marginTop = '10px';
+            hintBox.style.fontWeight = '700';
+            hintBox.innerText = `>>> ${wordData.h}`;
+            document.querySelector('.content-area').appendChild(hintBox);
+        }
+
+        function endGame(won) {
+            const overlay = document.getElementById('overlay');
+            const status = document.getElementById('status');
+            overlay.style.display = 'flex';
+            status.innerText = won ? "ACCESS GRANTED!" : "SYSTEM COMPROMISED!";
+            status.style.color = won ? "var(--primary)" : "var(--accent)";
+            speak(won ? "FIREWALL BREACHED. WELCOME." : "CRITICAL FAILURE. SECURITY LOCKDOWN.");
+            document.getElementById('revealed-word').innerText = targetWord;
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

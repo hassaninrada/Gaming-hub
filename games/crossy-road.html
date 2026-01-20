@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Crossy Road | Ultra-Correct V11</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bungee&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background: #8cc152;
+            font-family: 'Bungee', cursive;
+            overflow: hidden;
+        }
+
+        #ui {
+            position: fixed;
+            top: 30px;
+            left: 30px;
+            color: #fff;
+            text-shadow: 4px 4px 0 rgba(0, 0, 0, 0.3);
+            z-index: 100;
+            pointer-events: none;
+        }
+
+        #score {
+            font-size: 90px;
+            line-height: 0.8;
+        }
+
+        .label {
+            font-size: 14px;
+            letter-spacing: 4px;
+            opacity: 0.8;
+        }
+
+        #top-btns {
+            position: fixed;
+            top: 30px;
+            right: 30px;
+            display: flex;
+            gap: 10px;
+            z-index: 101;
+        }
+
+        .btn-top {
+            background: rgba(0, 0, 0, 0.2);
+            color: #fff;
+            border: 2px solid #fff;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-family: 'Bungee';
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        #overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 80px;
+            color: #000;
+            margin-bottom: 10px;
+        }
+
+        .play-btn {
+            background: #000;
+            color: #fff;
+            border: none;
+            padding: 20px 70px;
+            font-family: 'Bungee';
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 12px 0 #FFD600;
+            border-radius: 12px;
+            transition: 0.1s;
+        }
+
+        .play-btn:active {
+            transform: translateY(6px);
+            box-shadow: 0 6px 0 #FFD600;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="ui">
+        <div id="score">0</div>
+        <div class="label">DISTANCE</div>
+    </div>
+
+    <div id="top-btns">
+        <button class="btn-top">MORE GAMES</button>
+    </div>
+
+    <div id="overlay">
+        <h1 id="ov-status">SQUASHED!</h1>
+        <div id="final-score" style="font-size:32px; margin-bottom:30px;">SCORE: 00</div>
+        <button class="play-btn" onclick="location.reload()">TRY AGAIN</button>
+    </div>
+
+    <script>
+        /**
+         * CROSSY ROAD V11: ULTRA-CORRECT VOXEL SIMULATION
+         * Exact Orthographic Scale, Voxel Foliage, and Snappy Grid Logic.
+         */
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x8cc152);
+
+        // PERFECT ISOMETRIC SCALE
+        const aspect = window.innerWidth / window.innerHeight;
+        const d = 10;
+        const camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 1000);
+        camera.position.set(20, 25, 20);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        // Professional Lighting
+        const light = new THREE.DirectionalLight(0xffffff, 1.2);
+        light.position.set(-15, 40, 20);
+        light.castShadow = true;
+        light.shadow.camera.left = -30; light.shadow.camera.right = 30;
+        light.shadow.camera.top = 30; light.shadow.camera.bottom = -30;
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+
+        const state = {
+            score: 0, x: 0, z: 0,
+            isMoving: false, gameActive: true
+        };
+
+        // 1. VOXEL CHICKEN
+        const chicken = new THREE.Group();
+        const body = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.75, 0.7), new THREE.MeshStandardMaterial({ color: 0xfff176 }));
+        body.position.y = 0.375; body.castShadow = true; chicken.add(body);
+        const beak = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.15, 0.2), new THREE.MeshStandardMaterial({ color: 0xffa000 }));
+        beak.position.set(0, 0.35, -0.4); chicken.add(beak);
+        const comb = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.2, 0.35), new THREE.MeshStandardMaterial({ color: 0xe53935 }));
+        comb.position.set(0, 0.75, 0.1); chicken.add(comb);
+        scene.add(chicken);
+
+        const lanes = [];
+        const laneWidth = 40;
+
+        function createLane(z) {
+            const types = ['grass', 'grass', 'road', 'road', 'water', 'road'];
+            const type = z > -3 ? 'grass' : types[Math.floor(Math.random() * types.length)];
+            const lane = { z, type, speed: (0.02 + Math.random() * 0.06) * (Math.random() > 0.5 ? 1 : -1), props: [] };
+
+            const floorGeo = new THREE.BoxGeometry(laneWidth, 0.5, 1);
+            const floorMat = new THREE.MeshStandardMaterial({
+                color: type === 'grass' ? 0x9CCC65 : (type === 'road' ? 0x546e7a : 0x29B6F6)
+            });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.position.set(0, -0.25, z);
+            floor.receiveShadow = true;
+            scene.add(floor);
+            lane.mesh = floor;
+
+            if (type === 'grass' && z < -3) {
+                for (let i = 0; i < 5; i++) {
+                    const treeHeight = 1 + Math.random();
+                    const tree = new THREE.Mesh(new THREE.BoxGeometry(0.8, treeHeight, 0.8), new THREE.MeshStandardMaterial({ color: 0x2e7d32 }));
+                    tree.position.set(Math.floor(Math.random() * 24 - 12), treeHeight / 2, z);
+                    tree.castShadow = true;
+                    scene.add(tree);
+                    lane.props.push({ mesh: tree, type: 'tree' });
+                }
+            }
+            lanes.push(lane);
+        }
+
+        for (let i = 10; i > -35; i--) createLane(i);
+
+        window.addEventListener('keydown', (e) => {
+            if (!state.gameActive || state.isMoving) return;
+            let nx = state.x, nz = state.z;
+            if (e.key === 'ArrowUp' || e.key === 'w') { nz--; chicken.rotation.y = 0; }
+            else if (e.key === 'ArrowDown' || e.key === 's') { nz++; chicken.rotation.y = Math.PI; }
+            else if (e.key === 'ArrowLeft' || e.key === 'a') { nx--; chicken.rotation.y = Math.PI / 2; }
+            else if (e.key === 'ArrowRight' || e.key === 'd') { nx++; chicken.rotation.y = -Math.PI / 2; }
+
+            const targetLane = lanes.find(l => Math.round(l.z) === nz);
+            if (targetLane && targetLane.props.some(p => p.type === 'tree' && Math.round(p.mesh.position.x) === nx)) return;
+
+            state.isMoving = true;
+            state.x = nx; state.z = nz;
+
+            gsap.to(chicken.position, {
+                x: nx, z: nz, duration: 0.15, onComplete: () => {
+                    state.isMoving = false;
+                    if (Math.abs(nz) > state.score && nz < 0) {
+                        state.score = Math.abs(nz);
+                        document.getElementById('score').innerText = state.score;
+                        createLane(nz - 25);
+                    }
+                }
+            });
+            gsap.to(chicken.position, { y: 0.8, duration: 0.08, yoyo: true, repeat: 1 });
+        });
+
+        function spawnCar(lane) {
+            if (lane.type === 'road') {
+                const colors = [0xf44336, 0xffeb3b, 0xffffff, 0x03a9f4];
+                const car = new THREE.Group();
+                const body = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.6, 0.8), new THREE.MeshStandardMaterial({ color: colors[Math.floor(Math.random() * 4)] }));
+                body.position.y = 0.3; body.castShadow = true; car.add(body);
+                // Windows
+                const win = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.3, 0.7), new THREE.MeshStandardMaterial({ color: 0x333333 }));
+                win.position.y = 0.6; car.add(win);
+                car.position.set(lane.speed > 0 ? -22 : 22, 0, lane.z);
+                scene.add(car);
+                lane.props.push({ mesh: car, type: 'car' });
+            } else if (lane.type === 'water') {
+                const log = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.25, 0.85), new THREE.MeshStandardMaterial({ color: 0x795548 }));
+                log.position.set(lane.speed > 0 ? -22 : 22, -0.1, lane.z);
+                scene.add(log);
+                lane.props.push({ mesh: log, type: 'log' });
+            }
+        }
+
+        function animate() {
+            if (!state.gameActive) return;
+            requestAnimationFrame(animate);
+
+            lanes.forEach(lane => {
+                if ((lane.type === 'road' || lane.type === 'water') && Math.random() < 0.015) spawnCar(lane);
+                lane.props.forEach((p, i) => {
+                    if (p.type === 'car' || p.type === 'log') {
+                        p.mesh.position.x += lane.speed;
+                        if (Math.abs(p.mesh.position.x) > 25) {
+                            scene.remove(p.mesh); lane.props.splice(i, 1);
+                        }
+                    }
+                });
+            });
+
+            // Camera Panning
+            const tx = chicken.position.x + 20;
+            const tz = chicken.position.z + 20;
+            camera.position.x += (tx - camera.position.x) * 0.1;
+            camera.position.z += (tz - camera.position.z) * 0.1;
+
+            checkCollisions();
+            renderer.render(scene, camera);
+        }
+
+        function checkCollisions() {
+            const cl = lanes.find(l => Math.round(l.z) === state.z);
+            if (!cl) return;
+
+            if (cl.type === 'road') {
+                cl.props.forEach(p => {
+                    if (p.type === 'car' && Math.abs(p.mesh.position.x - chicken.position.x) < 0.8) handleDie();
+                });
+            } else if (cl.type === 'water') {
+                const log = cl.props.find(p => p.type === 'log' && Math.abs(p.mesh.position.x - chicken.position.x) < 1.8);
+                if (log) {
+                    state.x += cl.speed; chicken.position.x = state.x;
+                } else if (!state.isMoving) handleDie();
+            }
+            if (Math.abs(state.x) > 20) handleDie();
+        }
+
+        function handleDie() {
+            state.gameActive = false;
+            document.getElementById('overlay').style.display = 'flex';
+            document.getElementById('final-score').innerText = "SCORE: " + state.score;
+        }
+
+        animate();
+    </script>
+</body>
+
+</html>

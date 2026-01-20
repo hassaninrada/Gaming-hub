@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Maze 2.0 | GameHub Pro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .game-wrapper {
+            max-width: 800px;
+            margin: 40px auto;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+            user-select: none;
+        }
+
+        .stats-bar {
+            padding: 15px 40px;
+            background: rgba(124, 77, 255, 0.1);
+            display: flex;
+            justify-content: space-around;
+            font-size: 14px;
+            font-weight: 800;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .stat-val {
+            color: var(--accent-secondary);
+            margin-left: 5px;
+            font-size: 18px;
+        }
+
+        .game-body {
+            position: relative;
+            background: #000;
+            display: flex;
+            justify-content: center;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <header class="main-header" style="position: relative; background: transparent; border: none;">
+        <div class="nav-container">
+            <a href="../index.html" class="logo" style="text-decoration: none; color: inherit;">
+                <i data-lucide="arrow-left"></i>
+                <span>BACK TO <span class="accent-text">HUB</span></span>
+            </a>
+            <h2 style="font-weight:800; letter-spacing:-1px">CYBER MAZE 2.0</h2>
+        </div>
+    </header>
+
+    <div class="game-wrapper">
+        <div class="stats-bar">
+            <span>LEVEL: <span class="stat-val" id="level">1</span></span>
+            <span>TIME: <span class="stat-val" id="time">0</span></span>
+        </div>
+
+        <div class="game-body">
+            <canvas id="gameCanvas" width="600" height="600"></canvas>
+
+            <div class="overlay" id="startScreen" style="display:flex">
+                <h1 style="color:#00ff00; text-shadow:0 0 10px #00ff00; font-size:48px; margin-bottom:10px">SYSTEM
+                    BREACH</h1>
+                <p style="color:#aaa; cursor:pointer" onclick="startGame()">INITIATE SEQUENCE</p>
+                <p style="font-size:12px; margin-top:20px; color:#555">Collect <span style="color:#ffff00">DATA
+                        KEY</span> to Exit</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/shared.js"></script>
+    <script>
+        lucide.createIcons();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const COLS = 20;
+        const ROWS = 20;
+        const CELL = 30;
+
+        let maze = []; // 2D array of cells {n,s,e,w, visited}
+        let player = { r: 0, c: 0 };
+        let goal = { r: 19, c: 19 };
+        let key = { r: 0, c: 0, collected: false };
+        let level = 1;
+        let time = 0;
+        let timer = null;
+        let glitched = false;
+
+        function startGame() {
+            level = 1;
+            document.getElementById('startScreen').style.display = 'none';
+            initLevel();
+        }
+
+        function initLevel() {
+            clearInterval(timer);
+            time = 0;
+            document.getElementById('level').innerText = level;
+            player = { r: 0, c: 0 };
+            key = { r: 0, c: 0, collected: false };
+
+            generateMaze();
+            placeKey();
+
+            timer = setInterval(() => {
+                time++;
+                document.getElementById('time').innerText = time;
+                // Random glitch
+                if (Math.random() < 0.05) glitchEffect();
+            }, 1000);
+
+            draw();
+        }
+
+        function generateMaze() {
+            maze = [];
+            for (let r = 0; r < ROWS; r++) {
+                let row = [];
+                for (let c = 0; c < COLS; c++) {
+                    row.push({ top: true, right: true, bottom: true, left: true, visited: false });
+                }
+                maze.push(row);
+            }
+
+            let stack = [{ r: 0, c: 0 }];
+            maze[0][0].visited = true;
+
+            while (stack.length > 0) {
+                let curr = stack[stack.length - 1];
+                let neighbors = [];
+
+                // N
+                if (curr.r > 0 && !maze[curr.r - 1][curr.c].visited) neighbors.push({ r: curr.r - 1, c: curr.c, dir: 'top', opp: 'bottom' });
+                // S
+                if (curr.r < ROWS - 1 && !maze[curr.r + 1][curr.c].visited) neighbors.push({ r: curr.r + 1, c: curr.c, dir: 'bottom', opp: 'top' });
+                // E
+                if (curr.c < COLS - 1 && !maze[curr.r][curr.c + 1].visited) neighbors.push({ r: curr.r, c: curr.c + 1, dir: 'right', opp: 'left' });
+                // W
+                if (curr.c > 0 && !maze[curr.r][curr.c - 1].visited) neighbors.push({ r: curr.r, c: curr.c - 1, dir: 'left', opp: 'right' });
+
+                if (neighbors.length > 0) {
+                    let next = neighbors[Math.floor(Math.random() * neighbors.length)];
+                    maze[curr.r][curr.c][next.dir] = false;
+                    maze[next.r][next.c][next.opp] = false;
+                    maze[next.r][next.c].visited = true;
+                    stack.push(next);
+                } else {
+                    stack.pop();
+                }
+            }
+        }
+
+        function placeKey() {
+            // Pick rand pos far from start
+            let r = 0, c = 0;
+            while (r + c < 10) {
+                r = Math.floor(Math.random() * ROWS);
+                c = Math.floor(Math.random() * COLS);
+            }
+            key.r = r; key.c = c;
+        }
+
+        function glitchEffect() {
+            glitched = true;
+            draw();
+            setTimeout(() => { glitched = false; draw(); }, 100 + Math.random() * 200);
+        }
+
+        function move(dr, dc) {
+            let nr = player.r + dr;
+            let nc = player.c + dc;
+
+            if (nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) return;
+
+            // Wall Check
+            let cell = maze[player.r][player.c];
+            if (dr === -1 && cell.top) return;
+            if (dr === 1 && cell.bottom) return;
+            if (dc === 1 && cell.right) return;
+            if (dc === -1 && cell.left) return;
+
+            player.r = nr; player.c = nc;
+
+            // Key
+            if (!key.collected && player.r === key.r && player.c === key.c) {
+                key.collected = true;
+                if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('win');
+            }
+
+            // Exit
+            if (player.r === ROWS - 1 && player.c === COLS - 1) {
+                if (key.collected) {
+                    if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('win');
+                    level++;
+                    initLevel();
+                }
+            }
+
+            draw();
+        }
+
+        function draw() {
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, 600, 600);
+
+            if (glitched) {
+                ctx.translate(Math.random() * 10 - 5, 0); // Shake
+                ctx.fillStyle = Math.random() > 0.5 ? '#110000' : '#001100'; // tint
+                ctx.fillRect(0, 0, 600, 600);
+            }
+
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#00ff00';
+            if (glitched) ctx.strokeStyle = Math.random() > 0.5 ? '#ff00ff' : '#00ffff';
+
+            for (let r = 0; r < ROWS; r++) {
+                for (let c = 0; c < COLS; c++) {
+                    let cell = maze[r][c];
+                    let x = c * CELL;
+                    let y = r * CELL;
+
+                    ctx.beginPath();
+                    // Just draw walls that exist
+                    if (cell.top) { ctx.moveTo(x, y); ctx.lineTo(x + CELL, y); }
+                    if (cell.bottom) { ctx.moveTo(x, y + CELL); ctx.lineTo(x + CELL, y + CELL); }
+                    if (cell.left) { ctx.moveTo(x, y); ctx.lineTo(x, y + CELL); }
+                    if (cell.right) { ctx.moveTo(x + CELL, y); ctx.lineTo(x + CELL, y + CELL); }
+                    ctx.stroke();
+                }
+            }
+
+            // Key
+            if (!key.collected) {
+                ctx.fillStyle = '#ffff00';
+                ctx.shadowBlur = 10; ctx.shadowColor = '#ffff00';
+                ctx.beginPath(); ctx.arc(key.c * CELL + CELL / 2, key.r * CELL + CELL / 2, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+
+            // Exit
+            ctx.fillStyle = key.collected ? '#00e5ff' : '#550000'; // Blue if open, dark red if closed
+            ctx.fillRect((COLS - 1) * CELL + 5, (ROWS - 1) * CELL + 5, CELL - 10, CELL - 10);
+
+            // Player
+            ctx.fillStyle = '#0f0';
+            ctx.shadowBlur = 15; ctx.shadowColor = '#0f0';
+            ctx.beginPath(); ctx.arc(player.c * CELL + CELL / 2, player.r * CELL + CELL / 2, 8, 0, Math.PI * 2); ctx.fill();
+            ctx.shadowBlur = 0;
+
+            if (glitched) ctx.setTransform(1, 0, 0, 1, 0, 0); // reset
+        }
+
+        window.addEventListener('keydown', e => {
+            if (['ArrowUp', 'w'].includes(e.key)) move(-1, 0);
+            if (['ArrowDown', 's'].includes(e.key)) move(1, 0);
+            if (['ArrowLeft', 'a'].includes(e.key)) move(0, -1);
+            if (['ArrowRight', 'd'].includes(e.key)) move(0, 1);
+        });
+
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameHub - Car Simulator</title>
+    <link rel="stylesheet" href="css/shared.css">
+    <style>
+        .race-wrapper{display:flex;gap:20px}
+        #raceCanvas{flex:1;background:#2c3e50;border-radius:8px;border:3px solid #333}
+        #scene3D{display:none;flex:1;border-radius:8px;border:3px solid #333}
+        .controls{width:260px;display:flex;flex-direction:column;gap:12px}
+        .control-btn{padding:12px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;border:none;border-radius:8px}
+        .track{background:#95a5a6;padding:10px;border-radius:8px}
+        .car{width:40px;height:20px;border-radius:4px}
+        .mode-toggle{margin-bottom:10px}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏁 Car Simulator</h1>
+        <div class="mode-toggle">
+            <button class="control-btn" onclick="toggleMode('2d')">2D Mode</button>
+            <button class="control-btn" onclick="toggleMode('3d')">3D Mode</button>
+        </div>
+        <div class="race-wrapper">
+            <canvas id="raceCanvas" width="800" height="360"></canvas>
+            <div id="scene3D"></div>
+            <div class="controls">
+                <div class="track">
+                    <div id="controlsText">Controls: 2D: Player1: A/D accelerate left/right, Player2: Left/Right arrows</div>
+                </div>
+                    <div style="display:flex;flex-direction:column;gap:8px">
+                        <div style="display:flex;gap:8px;align-items:center">
+                            <button class="control-btn" onclick="startSim()">Start Simulator</button>
+                            <button class="control-btn" onclick="resetSim()">Reset</button>
+                            <button class="control-btn" onclick="goBack()">← Back to Hub</button>
+                        </div>
+                        <div style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+                            <div style="font-weight:700;color:#333">Speed: <span id="speedDisplay">0</span></div>
+                            <div style="font-weight:700;color:#333">Time: <span id="timerDisplay">0.0s</span></div>
+                        </div>
+                    </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+    <script>
+        let currentMode = '2d';
+        let scene, camera, renderer, car3d, clock3d;
+        let keys = {};
+        let carState = { speed: 0, angle: 0, position: new THREE.Vector3(0,0.5,0) };
+        let maxSpeed = 12;
+        const accel = 20;
+        const steerSpeed = 2.5;
+        const friction = 4;
+
+        // 2D variables
+        const canvas = document.getElementById('raceCanvas');
+        const ctx = canvas.getContext('2d');
+        let running2d = false;
+        const lanes = 3;
+        const laneHeight = canvas.height / lanes;
+
+        const players = [
+            {x:50, y: laneHeight*0.5 - 10, color:'#e74c3c', speed:0, accel:0.1, maxSpeed:5, friction:0.05},
+            {x:50, y: laneHeight*1.5 - 10, color:'#3498db', speed:0, accel:0.1, maxSpeed:5, friction:0.05}
+        ];
+
+        function toggleMode(mode) {
+            currentMode = mode;
+            if (mode === '2d') {
+                document.getElementById('raceCanvas').style.display = 'block';
+                document.getElementById('scene3D').style.display = 'none';
+                document.getElementById('controlsText').innerHTML = 'Controls: 2D: Player1: A/D accelerate left/right, Player2: Left/Right arrows';
+                reset2D();
+            } else {
+                document.getElementById('raceCanvas').style.display = 'none';
+                document.getElementById('scene3D').style.display = 'block';
+                document.getElementById('controlsText').innerHTML = 'Controls: 3D: W/S accelerate, A/D steer, Space brake';
+                init3D();
+            }
+        }
+
+        // 2D functions
+        function drawTrack(){
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.strokeStyle = '#bdc3c7';
+            for(let i=1;i<lanes;i++){
+                ctx.beginPath();
+                ctx.moveTo(0,i*laneHeight);
+                ctx.lineTo(canvas.width,i*laneHeight);
+                ctx.stroke();
+            }
+        }
+
+        // Obstacles for 2D mode
+        let obstacles2d = [];
+        function generateObstacles2D(count=6){
+            obstacles2d = [];
+            for(let i=0;i<count;i++){
+                const w = 30 + Math.random()*60;
+                const h = 20 + Math.random()*50;
+                const x = 160 + Math.random()*(canvas.width-260);
+                const lane = Math.floor(Math.random()*lanes);
+                const y = lane*laneHeight + (laneHeight - h)/2;
+                obstacles2d.push({x,y,w,h});
+            }
+        }
+
+        function drawCars(){
+            players.forEach(p=>{
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x,p.y,40,20);
+            });
+            // draw obstacles
+            ctx.fillStyle = '#a94442';
+            obstacles2d.forEach(o=> ctx.fillRect(o.x,o.y,o.w,o.h));
+        }
+
+        function update2D(){
+            if(!running2d) return;
+            players.forEach(p=>{
+                if (p.speed > 0) p.speed = Math.max(0, p.speed - p.friction);
+                if (p.speed < 0) p.speed = Math.min(0, p.speed + p.friction);
+                p.x += p.speed;
+                p.x = Math.max(0, Math.min(canvas.width-40, p.x));
+                // collision with obstacles
+                obstacles2d.forEach(o=>{
+                    if(rectOverlap(p.x,p.y,40,20,o.x,o.y,o.w,o.h)){
+                        // slow down and bounce back slightly
+                        p.x -= Math.sign(p.speed || 1) * 8;
+                        p.speed *= -0.4;
+                    }
+                });
+            });
+            drawTrack();
+            drawCars();
+            // update UI
+            const sp = Math.round(players[0].speed*10)/10;
+            document.getElementById('speedDisplay').textContent = sp;
+            if(simStartTime){ document.getElementById('timerDisplay').textContent = ((performance.now()-simStartTime)/1000).toFixed(1)+"s"; }
+            requestAnimationFrame(update2D);
+        }
+
+        function rectOverlap(ax,ay,aw,ah,bx,by,bw,bh){ return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by; }
+
+        let simStartTime = null;
+
+        function startSim(){
+            if (currentMode === '2d') {
+                // difficulty affects obstacles and top speed
+                const difficulty = localStorage.getItem('gameDifficulty') || 'normal';
+                let obsCount = 6;
+                if (difficulty === 'easy') { obsCount = 3; maxSpeed = 8; }
+                if (difficulty === 'hard') { obsCount = 10; maxSpeed = 16; }
+                running2d = true;
+                generateObstacles2D(obsCount);
+                simStartTime = performance.now();
+                update2D();
+            } else {
+                start3D();
+            }
+        }
+
+        function resetSim(){
+            if (currentMode === '2d') {
+                reset2D();
+            } else {
+                reset3D();
+            }
+        }
+
+        function reset2D(){
+            running2d = false;
+            players[0].x = 50; players[1].x = 50;
+            players[0].speed = 0; players[1].speed = 0;
+            simStartTime = null;
+            drawTrack();
+            drawCars();
+        }
+
+        // 3D functions
+        function init3D() {
+            if (scene) return; // already initialized
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xbfd1e5);
+
+            camera = new THREE.PerspectiveCamera(60, 800/360, 0.1, 1000);
+            camera.position.set(0, 6, -10);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(800, 360);
+            document.getElementById('scene3D').appendChild(renderer.domElement);
+
+            // Lights
+            const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
+            hemi.position.set(0, 200, 0);
+            scene.add(hemi);
+            const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+            dir.position.set(5,10,7);
+            scene.add(dir);
+
+            // Ground
+            const groundGeo = new THREE.PlaneGeometry(400, 400);
+            const groundMat = new THREE.MeshStandardMaterial({ color: 0x808080 });
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI/2;
+            scene.add(ground);
+
+            // Simple track markings
+            const lineGeo = new THREE.PlaneGeometry(1, 400);
+            const lineMat = new THREE.MeshBasicMaterial({ color:0xffffff });
+            for(let i=-6;i<=6;i+=2){
+                const l = new THREE.Mesh(lineGeo, lineMat);
+                l.rotation.x = -Math.PI/2;
+                l.position.set(i*2,0.01,0);
+                scene.add(l);
+            }
+
+            // Car (box)
+            const carGeo = new THREE.BoxGeometry(1.2,0.6,2.2);
+            const carMat = new THREE.MeshStandardMaterial({ color:0xff4444 });
+            car3d = new THREE.Mesh(carGeo, carMat);
+            car3d.position.copy(carState.position);
+            car3d.castShadow = true;
+            scene.add(car3d);
+
+            // 3D obstacles (boxes)
+            for(let i=0;i<10;i++){
+                const bx = (Math.random()-0.5)*80;
+                const bz = (Math.random()-0.5)*80;
+                const boxGeo = new THREE.BoxGeometry(1+Math.random()*3,1+Math.random()*3,1+Math.random()*3);
+                const boxMat = new THREE.MeshStandardMaterial({ color: 0x8b0000 });
+                const b = new THREE.Mesh(boxGeo, boxMat);
+                b.position.set(bx, 0.5, bz);
+                scene.add(b);
+            }
+
+            // simple wheels (visual)
+            const wheelGeo = new THREE.CylinderGeometry(0.25,0.25,0.4,12);
+            const wheelMat = new THREE.MeshStandardMaterial({ color:0x222222 });
+            const offsets = [[0.6,-0.25,0.9],[ -0.6,-0.25,0.9],[0.6,-0.25,-0.9],[-0.6,-0.25,-0.9]];
+            offsets.forEach(o=>{
+                const w = new THREE.Mesh(wheelGeo, wheelMat);
+                w.rotation.z = Math.PI/2;
+                w.position.set(o[0],o[1],o[2]);
+                car3d.add(w);
+            });
+
+            clock3d = new THREE.Clock();
+        }
+
+        let running3d = false;
+        function start3D(){ if(!running3d){ running3d=true; clock3d.start(); animate3D(); }}
+        function reset3D(){ running3d=false; carState = { speed:0, angle:0, position: new THREE.Vector3(0,0.5,0) }; car3d.position.copy(carState.position); car3d.rotation.y = 0; camera.position.set(0,6,-10); camera.lookAt(car3d.position); render3D(); }
+
+        function animate3D(){
+            if(!running3d) return;
+            const dt = Math.min(0.05, clock3d.getDelta());
+
+            // Input
+            let forward = keys['w']?1: (keys['s']?-1:0);
+            let steer = keys['a']?-1: (keys['d']?1:0);
+            const brake = keys[' '];
+
+            // update speed
+            if(forward !== 0){
+                carState.speed += forward * accel * dt;
+            } else {
+                // natural friction
+                if(carState.speed>0) carState.speed = Math.max(0, carState.speed - friction*dt);
+                if(carState.speed<0) carState.speed = Math.min(0, carState.speed + friction*dt);
+            }
+
+            // brake
+            if(brake) carState.speed *= 0.95;
+
+            // clamp speed
+            carState.speed = Math.max(-maxSpeed/2, Math.min(maxSpeed, carState.speed));
+
+            // steering affects angle based on speed
+            carState.angle += steer * steerSpeed * dt * (carState.speed/Math.max(1, maxSpeed/3));
+
+            // update position using angle
+            const forwardVec = new THREE.Vector3(Math.sin(carState.angle), 0, Math.cos(carState.angle));
+            carState.position.addScaledVector(forwardVec, carState.speed * dt);
+
+            // apply to mesh
+            car3d.position.copy(carState.position);
+            car3d.rotation.y = carState.angle;
+
+            // camera follow
+            const camOffset = new THREE.Vector3(0,4,-8).applyAxisAngle(new THREE.Vector3(0,1,0), carState.angle);
+            const camPos = car3d.position.clone().add(camOffset);
+            camera.position.lerp(camPos, 0.12);
+            camera.lookAt(car3d.position.clone().add(new THREE.Vector3(0,1,0)));
+
+
+
+            render3D();
+            requestAnimationFrame(animate3D);
+        }
+
+        function render3D(){ renderer.render(scene, camera); }
+
+
+
+        // Input listeners: 2D controls (A/D, Arrows) and 3D controls (W/A/S/D, Space)
+        window.addEventListener('keydown', e => {
+            const k = e.key;
+            // 2D controls
+            if (currentMode === '2d') {
+                if (k === 'a' || k === 'A') players[0].speed = -players[0].maxSpeed;
+                if (k === 'd' || k === 'D') players[0].speed = players[0].maxSpeed;
+                if (k === 'ArrowLeft') players[1].speed = -players[1].maxSpeed;
+                if (k === 'ArrowRight') players[1].speed = players[1].maxSpeed;
+            }
+            // 3D controls (record key state)
+            keys[e.key?.toLowerCase()] = true;
+        });
+
+        window.addEventListener('keyup', e => {
+            const k = e.key;
+            if (currentMode === '2d') {
+                if (k === 'a' || k === 'A' || k === 'd' || k === 'D') players[0].speed = 0;
+                if (k === 'ArrowLeft' || k === 'ArrowRight') players[1].speed = 0;
+            }
+            keys[e.key?.toLowerCase()] = false;
+        });
+
+        function goBack(){
+            window.location.href='index.html';
+        }
+
+        // Check if user is logged in
+        const user = JSON.parse(localStorage.getItem('currentUser'));
+        if (!user) {
+            window.location.href = 'signin.html';
+        } else {
+            toggleMode('2d');
+        }
+    </script>
+<script src="shared.js"></script>
+</body>
+</html>

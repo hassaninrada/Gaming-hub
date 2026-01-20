@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flappy Pro 2.0 | GameHub Pro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .game-wrapper {
+            max-width: 600px;
+            margin: 40px auto;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+        }
+
+        .stats-bar {
+            padding: 15px 40px;
+            background: rgba(124, 77, 255, 0.1);
+            display: flex;
+            justify-content: space-around;
+            font-size: 14px;
+            font-weight: 800;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .stat-val {
+            color: var(--accent-secondary);
+            margin-left: 5px;
+            font-size: 18px;
+        }
+
+        .game-body {
+            position: relative;
+            background: #000;
+            height: 600px;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <div class="bg-glow-container">
+        <div class="glow-sphere sphere-1"></div>
+        <div class="glow-sphere sphere-2"></div>
+    </div>
+
+    <header class="main-header" style="position: relative; background: transparent; border: none;">
+        <div class="nav-container">
+            <a href="../index.html" class="logo" style="text-decoration: none; color: inherit;">
+                <i data-lucide="arrow-left"></i>
+                <span>BACK TO <span class="accent-text">HUB</span></span>
+            </a>
+            <h2 style="font-weight:800; letter-spacing:-1px">FLAPPY NEON 2.0</h2>
+        </div>
+    </header>
+
+    <div class="game-wrapper">
+        <div class="stats-bar">
+            <span>SCORE: <span class="stat-val" id="score">0</span></span>
+            <span>HIGH: <span class="stat-val" id="highScore">0</span></span>
+        </div>
+
+        <div class="game-body" onmousedown="jump()">
+            <canvas id="gameCanvas" width="400" height="600"></canvas>
+
+            <div class="overlay" id="startScreen" style="display:flex">
+                <h1 style="font-size:48px; margin-bottom:10px">READY?</h1>
+                <p style="color:#aaa; letter-spacing:2px">CLICK OR SPACE TO FLY</p>
+                <div style="margin-top:20px; font-size:12px; opacity:0.7">AVOID THE NEON PIPES</div>
+            </div>
+
+            <div class="overlay" id="gameOverScreen">
+                <h1 style="color:#ef4444; font-size:48px; margin-bottom:10px">CRASHED</h1>
+                <p style="margin-bottom:20px">SCORE: <span id="finalScore" style="color:#fff; font-weight:bold">0</span>
+                </p>
+                <button class="btn-primary" onclick="resetGame()">RETRY</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/shared.js"></script>
+    <script>
+        lucide.createIcons();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let bird = { x: 50, y: 300, vy: 0, r: 12 };
+        let pipes = [];
+        let particles = [];
+        let score = 0;
+        let running = false;
+        let gameActive = false;
+        let gravity = 0.4;
+        let jumpStr = -7;
+        let speed = 3;
+        let pipeTimer = 0;
+
+        let highScore = parseInt(localStorage.getItem('flappy_high') || '0');
+        document.getElementById('highScore').innerText = highScore;
+
+        function resetGame() {
+            bird.y = 300; bird.vy = 0;
+            pipes = [];
+            particles = [];
+            score = 0;
+            speed = 3;
+            document.getElementById('score').innerText = 0;
+            document.getElementById('gameOverScreen').style.display = 'none';
+            document.getElementById('startScreen').style.display = 'flex';
+            running = false;
+            gameActive = true;
+            loop(); // Render start frame
+        }
+
+        function startGame() {
+            if (running) return;
+            document.getElementById('startScreen').style.display = 'none';
+            running = true;
+            jump();
+        }
+
+        function jump() {
+            if (!gameActive) return;
+            if (!running) { startGame(); return; }
+
+            bird.vy = jumpStr;
+            createJumpParticles();
+            if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('move'); // Flap sound
+        }
+
+        function createJumpParticles() {
+            for (let i = 0; i < 5; i++) {
+                particles.push({
+                    x: bird.x - 5,
+                    y: bird.y + 5,
+                    vx: (Math.random() - 0.5) * 2 - 2,
+                    vy: (Math.random() - 0.5) * 2,
+                    life: 1.0
+                });
+            }
+        }
+
+        function die() {
+            running = false;
+            gameActive = false;
+            if (score > highScore) { highScore = score; localStorage.setItem('flappy_high', highScore); }
+            document.getElementById('finalScore').innerText = score;
+            document.getElementById('highScore').innerText = highScore;
+            document.getElementById('gameOverScreen').style.display = 'flex';
+            if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('loss');
+        }
+
+        function update() {
+            if (!running) return;
+
+            // Bird
+            bird.vy += gravity;
+            bird.y += bird.vy;
+
+            if (bird.y > 600 - bird.r || bird.y < bird.r) die();
+
+            // Pipes
+            pipeTimer++;
+            if (pipeTimer > 100) {  // roughly 1.6s
+                // Generate
+                let gap = 150;
+                let minH = 50;
+                let maxH = 600 - gap - minH;
+                let h = minH + Math.random() * (maxH - minH);
+
+                pipes.push({ x: 400, topH: h, botY: h + gap, passed: false });
+                pipeTimer = 0;
+            }
+
+            pipes.forEach((p, i) => {
+                p.x -= speed;
+
+                // Collision
+                // Top Pipe Rect: x, 0, 50, topH
+                // Bot Pipe Rect: x, botY, 50, 600-botY
+                // Simple circle-rect collision
+
+                if (bird.x + bird.r > p.x && bird.x - bird.r < p.x + 50) {
+                    if (bird.y - bird.r < p.topH || bird.y + bird.r > p.botY) {
+                        die();
+                    }
+                }
+
+                // Score
+                if (!p.passed && p.x + 50 < bird.x) {
+                    p.passed = true;
+                    score++;
+                    document.getElementById('score').innerText = score;
+                    if (score % 5 === 0) speed += 0.2; // Speed up
+                    if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('win'); // Point sound
+                }
+
+                if (p.x < -100) pipes.splice(i, 1);
+            });
+
+            // Particles
+            particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.life -= 0.05; });
+            particles = particles.filter(p => p.life > 0);
+        }
+
+        function draw() {
+            // BG
+            let grad = ctx.createLinearGradient(0, 0, 0, 600);
+            grad.addColorStop(0, '#0f0c29');
+            grad.addColorStop(1, '#302b63');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 400, 600);
+
+            // Stars
+            ctx.fillStyle = '#fff';
+            if (Math.random() > 0.9) ctx.fillRect(Math.random() * 400, Math.random() * 600, 2, 2);
+
+            // Pipes
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = '#00ff00';
+            ctx.fillStyle = '#00ff00';
+            pipes.forEach(p => {
+                // Top
+                ctx.fillRect(p.x, 0, 50, p.topH);
+                // Cap
+                ctx.fillRect(p.x - 2, p.topH - 20, 54, 20);
+
+                // Bot
+                ctx.fillRect(p.x, p.botY, 50, 600 - p.botY);
+                // Cap
+                ctx.fillRect(p.x - 2, p.botY, 54, 20);
+            });
+            ctx.shadowBlur = 0;
+
+            // Particles
+            ctx.fillStyle = '#fff';
+            particles.forEach(p => {
+                ctx.globalAlpha = p.life;
+                ctx.fillRect(p.x, p.y, 3, 3);
+            });
+            ctx.globalAlpha = 1;
+
+            // Bird
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#ffff00';
+            ctx.fillStyle = '#ffff00';
+            ctx.beginPath();
+            ctx.arc(bird.x, bird.y, bird.r, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Eye
+            ctx.fillStyle = '#000';
+            ctx.beginPath(); ctx.arc(bird.x + 6, bird.y - 4, 3, 0, Math.PI * 2); ctx.fill();
+
+            // Beak
+            ctx.fillStyle = '#ff6600';
+            ctx.beginPath();
+            ctx.moveTo(bird.x + 5, bird.y);
+            ctx.lineTo(bird.x + 15, bird.y + 5);
+            ctx.lineTo(bird.x + 5, bird.y + 10);
+            ctx.fill();
+
+            ctx.shadowBlur = 0;
+        }
+
+        function loop() {
+            update();
+            draw();
+            if (gameActive) requestAnimationFrame(loop);
+        }
+
+        window.addEventListener('keydown', e => { if (e.code === 'Space') jump(); });
+
+        resetGame();
+    </script>
+</body>
+
+</html>

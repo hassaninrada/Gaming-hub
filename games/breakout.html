@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Breakout Neon 2.0 | GameHub Pro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .game-wrapper {
+            max-width: 800px;
+            margin: 40px auto;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+        }
+
+        .stats-bar {
+            padding: 15px 40px;
+            background: rgba(124, 77, 255, 0.1);
+            display: flex;
+            justify-content: space-around;
+            font-size: 14px;
+            font-weight: 800;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .stat-val {
+            color: var(--accent-secondary);
+            margin-left: 5px;
+            font-size: 18px;
+        }
+
+        .game-body {
+            position: relative;
+            background: #000;
+            display: flex;
+            justify-content: center;
+        }
+
+        canvas {
+            background: #050510;
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <div class="bg-glow-container">
+        <div class="glow-sphere sphere-1"></div>
+        <div class="glow-sphere sphere-2"></div>
+    </div>
+
+    <header class="main-header" style="position: relative; background: transparent; border: none;">
+        <div class="nav-container">
+            <a href="../index.html" class="logo" style="text-decoration: none; color: inherit;">
+                <i data-lucide="arrow-left"></i>
+                <span>BACK TO <span class="accent-text">HUB</span></span>
+            </a>
+            <h2 style="font-weight:800; letter-spacing:-1px">BREAKOUT NEON 2.0</h2>
+        </div>
+    </header>
+
+    <div class="game-wrapper">
+        <div class="stats-bar">
+            <span>SCORE: <span class="stat-val" id="score">0</span></span>
+            <span>LIVES: <span class="stat-val" id="lives">3</span></span>
+            <span>LEVEL: <span class="stat-val" id="level">1</span></span>
+        </div>
+
+        <div class="game-body">
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+            <div class="overlay" id="startScreen" style="display:flex">
+                <h1 style="font-size:48px; margin-bottom:10px">READY?</h1>
+                <p style="color:#aaa; cursor:pointer" onclick="startGame()">CLICK TO LAUNCH</p>
+            </div>
+
+            <div class="overlay" id="gameOverScreen">
+                <h1 style="color:var(--accent-primary); font-size:48px; margin-bottom:10px">GAME OVER</h1>
+                <p style="margin-bottom:20px">FINAL SCORE: <span id="finalScore" style="color:#fff">0</span></p>
+                <button class="btn-primary" onclick="resetGame()">REPLAY</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/shared.js"></script>
+    <script>
+        lucide.createIcons();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let paddle = { x: 350, y: 560, w: 100, h: 15, color: '#00e5ff' };
+        let ball = { x: 400, y: 550, r: 8, vx: 0, vy: 0, active: false };
+        let bricks = [];
+        let particles = [];
+        let powerups = [];
+
+        let score = 0;
+        let lives = 3;
+        let level = 1;
+        let active = false;
+
+        const COLORS = ['#FF0D72', '#0DC2FF', '#0DFF72', '#F538FF', '#FF8E0D', '#FFE138'];
+
+        function initLevel() {
+            bricks = [];
+            // Rows
+            for (let r = 0; r < 5 + level; r++) {
+                // Cols
+                for (let c = 0; c < 10; c++) {
+                    bricks.push({
+                        x: 80 + c * 64,
+                        y: 50 + r * 25,
+                        w: 60, h: 20,
+                        color: COLORS[r % COLORS.length],
+                        active: true
+                    });
+                }
+            }
+        }
+
+        function resetGame() {
+            score = 0; lives = 3; level = 1;
+            paddle.w = 100;
+            updateUI();
+            initialBall();
+            initLevel();
+            document.getElementById('gameOverScreen').style.display = 'none';
+            document.getElementById('startScreen').style.display = 'flex';
+            active = false;
+            loop();
+        }
+
+        function initialBall() {
+            ball.active = false;
+            ball.x = paddle.x + paddle.w / 2;
+            ball.y = paddle.y - 10;
+        }
+
+        function startGame() {
+            if (active || lives <= 0) return;
+            document.getElementById('startScreen').style.display = 'none';
+            active = true;
+            ball.active = true;
+            ball.vy = -6 - (level * 0.5);
+            ball.vx = (Math.random() - 0.5) * 6;
+        }
+
+        function update() {
+            if (!active && lives > 0) {
+                // Ball stuck to paddle
+                ball.x = paddle.x + paddle.w / 2;
+                return;
+            }
+            if (!active) return;
+
+            // Ball Move
+            ball.x += ball.vx;
+            ball.y += ball.vy;
+
+            // Walls
+            if (ball.x < ball.r || ball.x > 800 - ball.r) {
+                ball.vx *= -1;
+                if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('move');
+            }
+            if (ball.y < ball.r) {
+                ball.vy *= -1;
+                if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('move');
+            }
+
+            // Floor
+            if (ball.y > 600) {
+                lives--;
+                updateUI();
+                if (lives <= 0) {
+                    active = false;
+                    document.getElementById('finalScore').innerText = score;
+                    document.getElementById('gameOverScreen').style.display = 'flex';
+                    if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('loss');
+                } else {
+                    active = false;
+                    initialBall();
+                    document.getElementById('startScreen').style.display = 'flex';
+                }
+                return;
+            }
+
+            // Paddle
+            if (ball.y + ball.r > paddle.y && ball.y - ball.r < paddle.y + paddle.h &&
+                ball.x + ball.r > paddle.x && ball.x - ball.r < paddle.x + paddle.w) {
+
+                ball.vy = -Math.abs(ball.vy);
+                // Adjust vx based on hit pos
+                let center = paddle.x + paddle.w / 2;
+                let df = (ball.x - center) / (paddle.w / 2);
+                ball.vx = df * 8; // Curve
+                if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('click');
+            }
+
+            // Bricks
+            let levelClear = true;
+            bricks.forEach(b => {
+                if (!b.active) return;
+                levelClear = false;
+
+                if (ball.x > b.x && ball.x < b.x + b.w &&
+                    ball.y > b.y && ball.y < b.y + b.h) {
+                    b.active = false;
+                    ball.vy *= -1;
+                    score += 10;
+                    updateUI();
+                    createExpr(b.x + b.w / 2, b.y + b.h / 2, b.color);
+                    if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('win');
+
+                    // Powerup chance
+                    if (Math.random() < 0.1) {
+                        powerups.push({ x: b.x + b.w / 2, y: b.y, type: Math.random() > 0.5 ? 'wide' : 'life' });
+                    }
+                }
+            });
+
+            if (levelClear) {
+                level++;
+                ball.active = false;
+                active = false;
+                setTimeout(() => {
+                    initLevel();
+                    initialBall();
+                    document.getElementById('startScreen').style.display = 'flex';
+                    active = false;
+                }, 1000);
+            }
+
+            // Powerups
+            powerups.forEach((p, i) => {
+                p.y += 2;
+                if (p.y > 600) powerups.splice(i, 1);
+                // Hit paddle?
+                if (p.y > paddle.y && p.x > paddle.x && p.x < paddle.x + paddle.w) {
+                    powerups.splice(i, 1);
+                    if (p.type === 'wide') { paddle.w = 150; setTimeout(() => paddle.w = 100, 5000); }
+                    if (p.type === 'life') { lives++; updateUI(); }
+                    // Sound
+                }
+            });
+
+            // Particles
+            particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.life -= 0.05; });
+            particles = particles.filter(p => p.life > 0);
+        }
+
+        function createExpr(x, y, c) {
+            for (let i = 0; i < 10; i++) {
+                particles.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 5, vy: (Math.random() - 0.5) * 5,
+                    life: 1.0, color: c
+                });
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('score').innerText = score;
+            document.getElementById('lives').innerText = lives;
+            document.getElementById('level').innerText = level;
+        }
+
+        function draw() {
+            ctx.fillStyle = '#050510';
+            ctx.fillRect(0, 0, 800, 600);
+
+            // Bricks
+            bricks.forEach(b => {
+                if (!b.active) return;
+                ctx.fillStyle = b.color;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = b.color;
+                ctx.fillRect(b.x, b.y, b.w, b.h);
+                // Shine
+                ctx.fillStyle = 'rgba(255,255,255,0.2)';
+                ctx.fillRect(b.x, b.y, b.w, b.h / 2);
+            });
+            ctx.shadowBlur = 0;
+
+            // Paddle
+            ctx.fillStyle = paddle.color;
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = paddle.color;
+            ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
+
+            // Ball
+            ctx.fillStyle = '#fff';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#fff';
+            ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); ctx.fill();
+
+            // Particles
+            particles.forEach(p => {
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI * 2); ctx.fill();
+            });
+            ctx.globalAlpha = 1;
+
+            // Powerups
+            powerups.forEach(p => {
+                ctx.fillStyle = p.type === 'wide' ? '#00ff00' : '#ff0000';
+                ctx.shadowBlur = 5; ctx.shadowColor = ctx.fillStyle;
+                ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.font = '10px Arial'; ctx.textAlign = 'center';
+                ctx.fillText(p.type === 'wide' ? 'W' : '♥', p.x, p.y + 3);
+            });
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        window.addEventListener('mousemove', e => {
+            let rect = canvas.getBoundingClientRect();
+            let x = e.clientX - rect.left;
+            paddle.x = Math.max(0, Math.min(800 - paddle.w, x - paddle.w / 2));
+        });
+
+        window.addEventListener('mousedown', () => { if (!active) startGame(); });
+
+        resetGame();
+    </script>
+</body>
+
+</html>

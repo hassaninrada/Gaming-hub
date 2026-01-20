@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backgammon Premium | GameHub Pro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .game-wrapper {
+            max-width: 1000px;
+            margin: 40px auto;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+        }
+
+        .stats-bar {
+            padding: 20px 40px;
+            background: rgba(124, 77, 255, 0.1);
+            display: flex;
+            justify-content: space-around;
+            font-size: 16px;
+            font-weight: 800;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .stat-val {
+            color: var(--accent-secondary);
+            margin-left: 5px;
+        }
+
+        .game-body {
+            padding: 40px;
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .board {
+            display: flex;
+            background: #4a3728;
+            /* Wood feel */
+            border: 8px solid #2d1e11;
+            padding: 10px;
+            border-radius: 8px;
+            position: relative;
+        }
+
+        .half {
+            display: flex;
+            flex-direction: column;
+            gap: 50px;
+            padding: 10px 0;
+            position: relative;
+        }
+
+        .bar {
+            width: 40px;
+            background: #2d1e11;
+            margin: 0 5px;
+            border-radius: 4px;
+        }
+
+        .points-row {
+            display: flex;
+            gap: 2px;
+        }
+
+        .point {
+            width: 50px;
+            height: 180px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .point.down {
+            flex-direction: column-reverse;
+        }
+
+        .triangle {
+            width: 0;
+            height: 0;
+            border-left: 25px solid transparent;
+            border-right: 25px solid transparent;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .point.down .triangle {
+            border-bottom: 180px solid #634b35;
+            top: auto;
+            bottom: 0;
+        }
+
+        .point.up .triangle {
+            border-top: 180px solid #634b35;
+        }
+
+        .point.alt.down .triangle {
+            border-bottom-color: #3b2b1d;
+        }
+
+        .point.alt.up .triangle {
+            border-top-color: #3b2b1d;
+        }
+
+        .checker {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin: -10px 0;
+            z-index: 5;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .checker.white {
+            background: radial-gradient(circle at 30% 30%, #fff, #bbb);
+            border: 2px solid #ddd;
+        }
+
+        .checker.black {
+            background: radial-gradient(circle at 30% 30%, #444, #000);
+            border: 2px solid #222;
+        }
+
+        .dice-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            gap: 15px;
+            z-index: 20;
+        }
+
+        .die {
+            width: 40px;
+            height: 40px;
+            background: #fff;
+            color: #000;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <div class="bg-glow-container">
+        <div class="glow-sphere sphere-1"></div>
+        <div class="glow-sphere sphere-2"></div>
+    </div>
+
+    <header class="main-header" style="position: relative; background: transparent; border: none;">
+        <div class="nav-container">
+            <a href="index.html" class="logo" style="text-decoration: none; color: inherit;">
+                <i data-lucide="arrow-left"></i>
+                <span>BACK TO <span class="accent-text">HUB</span></span>
+            </a>
+            <h2 style="font-weight:800; letter-spacing:-1px">BACKGAMMON PREMIUM</h2>
+        </div>
+    </header>
+
+    <div class="game-wrapper">
+        <div class="stats-bar">
+            <span>WHITE: <span class="stat-val" id="white-score">0</span></span>
+            <span>TURN: <span class="stat-val" id="turn">WHITE</span></span>
+            <span>BLACK: <span class="stat-val" id="black-score">0</span></span>
+        </div>
+
+        <div class="game-body">
+            <div class="board" id="board">
+                <div class="half" id="half-1">
+                    <div class="points-row" id="upper-left"></div>
+                    <div class="points-row" id="lower-left"></div>
+                    <div class="dice-container" id="dice-p1"></div>
+                </div>
+                <div class="bar"></div>
+                <div class="half" id="half-2">
+                    <div class="points-row" id="upper-right"></div>
+                    <div class="points-row" id="lower-right"></div>
+                    <div class="dice-container" id="dice-p2"
+                        style="left: auto; right: 20px; transform: translateY(-50%)"></div>
+                </div>
+            </div>
+            <div class="game-controls">
+                <button class="btn-primary" onclick="rollDice()">ROLL ENERGY</button>
+                <button class="btn-secondary" onclick="initGame()">RESET</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/shared.js"></script>
+    <script>
+        lucide.createIcons();
+
+        let board = Array(24).fill().map(() => []);
+        let turn = 'white';
+        let dice = [];
+        let selectedPoint = null;
+        let movesLeft = [];
+
+        function initGame() {
+            board = Array(24).fill().map(() => []);
+            setupPoint(0, 'white', 2);
+            setupPoint(5, 'black', 5);
+            setupPoint(7, 'black', 3);
+            setupPoint(11, 'white', 5);
+            setupPoint(12, 'black', 5);
+            setupPoint(16, 'white', 3);
+            setupPoint(18, 'white', 5);
+            setupPoint(23, 'black', 2);
+
+            dice = [];
+            movesLeft = [];
+            selectedPoint = null;
+            render();
+            updateUI();
+        }
+
+        function setupPoint(idx, color, count) {
+            for (let i = 0; i < count; i++) board[idx].push(color);
+        }
+
+        function render() {
+            renderSection('upper-left', 12, 17, 'down');
+            renderSection('upper-right', 18, 23, 'down');
+            renderSection('lower-left', 11, 6, 'up');
+            renderSection('lower-right', 5, 0, 'up');
+            highlightPossibleMoves();
+        }
+
+        function highlightPossibleMoves() {
+            document.querySelectorAll('.point').forEach(p => p.classList.remove('target'));
+            if (selectedPoint !== null) {
+                const possible = getPossibleDestinations(selectedPoint);
+                possible.forEach(idx => {
+                    const el = getPointEl(idx);
+                    if (el) el.classList.add('target');
+                });
+            }
+        }
+
+        function getPointEl(idx) {
+            const sections = ['lower-right', 'lower-left', 'upper-left', 'upper-right'];
+            // 0-5: lower-right (up), 6-11: lower-left (up), 12-17: upper-left (down), 18-23: upper-right (down)
+            let sectionId, pos;
+            if (idx <= 5) { sectionId = 'lower-right'; pos = 5 - idx; }
+            else if (idx <= 11) { sectionId = 'lower-left'; pos = 11 - idx; }
+            else if (idx <= 17) { sectionId = 'upper-left'; pos = idx - 12; }
+            else { sectionId = 'upper-right'; pos = idx - 18; }
+
+            return document.getElementById(sectionId).children[pos];
+        }
+
+        function getPossibleDestinations(fromIdx) {
+            if (movesLeft.length === 0) return [];
+            const destinations = [];
+            const dir = turn === 'white' ? 1 : -1;
+
+            movesLeft.forEach(m => {
+                const target = fromIdx + (m * dir);
+                if (target >= 0 && target <= 23) {
+                    const targetPoint = board[target];
+                    if (targetPoint.length <= 1 || targetPoint[0] === turn) {
+                        destinations.push(target);
+                    }
+                }
+            });
+            return [...new Set(destinations)];
+        }
+
+        function renderSection(id, start, end, dir) {
+            const container = document.getElementById(id);
+            container.innerHTML = '';
+            const step = start < end ? 1 : -1;
+            for (let i = start; (step > 0 ? i <= end : i >= end); i += step) {
+                const p = document.createElement('div');
+                p.className = `point ${dir} ${i % 2 === 0 ? 'alt' : ''}`;
+                if (selectedPoint === i) p.style.background = 'rgba(124, 77, 255, 0.3)';
+
+                const tri = document.createElement('div');
+                tri.className = 'triangle';
+                p.appendChild(tri);
+
+                board[i].forEach(color => {
+                    const c = document.createElement('div');
+                    c.className = `checker ${color}`;
+                    p.appendChild(c);
+                });
+
+                p.onclick = () => handlePointClick(i);
+                container.appendChild(p);
+            }
+        }
+
+        function handlePointClick(idx) {
+            if (movesLeft.length === 0) {
+                alert("ROLL THE ENERGY DICE FIRST.");
+                return;
+            }
+
+            if (selectedPoint === null) {
+                if (board[idx].length > 0 && board[idx][0] === turn) {
+                    selectedPoint = idx;
+                    if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('click');
+                    render();
+                }
+            } else {
+                const possible = getPossibleDestinations(selectedPoint);
+                if (possible.includes(idx)) {
+                    // Execute move
+                    const dist = Math.abs(idx - selectedPoint);
+                    board[idx].push(turn);
+                    board[selectedPoint].pop();
+
+                    // Consume die
+                    const dieIdx = movesLeft.indexOf(dist);
+                    movesLeft.splice(dieIdx, 1);
+
+                    if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('move');
+                    selectedPoint = null;
+                    render();
+                    updateDiceUI();
+
+                    if (movesLeft.length === 0) {
+                        turn = turn === 'white' ? 'black' : 'white';
+                        updateUI();
+                        if (turn === 'black') setTimeout(autoEnemyRoll, 1000);
+                    }
+                } else {
+                    selectedPoint = (board[idx].length > 0 && board[idx][0] === turn) ? idx : null;
+                    render();
+                }
+            }
+        }
+
+        function rollDice() {
+            if (movesLeft.length > 0) return;
+            const d1 = Math.floor(Math.random() * 6) + 1;
+            const d2 = Math.floor(Math.random() * 6) + 1;
+            dice = [d1, d2];
+            movesLeft = (d1 === d2) ? [d1, d1, d1, d1] : [d1, d2];
+
+            updateDiceUI();
+            if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('move');
+        }
+
+        function updateDiceUI() {
+            const container = turn === 'white' ? document.getElementById('dice-p2') : document.getElementById('dice-p1');
+            document.getElementById('dice-p1').innerHTML = '';
+            document.getElementById('dice-p2').innerHTML = '';
+            container.innerHTML = movesLeft.map(d => `<div class="die">${d}</div>`).join('');
+        }
+
+        function autoEnemyRoll() {
+            if (turn === 'black') rollDice();
+        }
+
+        function updateUI() {
+            document.getElementById('turn').innerText = turn.toUpperCase();
+            document.getElementById('turn').style.color = turn === 'white' ? '#fff' : '#000';
+        }
+
+        initGame();
+    </script>
+</body>
+
+</html>

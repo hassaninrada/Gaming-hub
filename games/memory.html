@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neural Memory | GameHub Pro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .game-wrapper {
+            max-width: 800px;
+            margin: 40px auto;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+        }
+
+        .stats-bar {
+            padding: 20px 40px;
+            background: rgba(124, 77, 255, 0.1);
+            display: flex;
+            justify-content: space-around;
+            font-size: 16px;
+            font-weight: 800;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .stat-val {
+            color: var(--accent-secondary);
+            margin-left: 5px;
+        }
+
+        .game-body {
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+
+        .memory-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            perspective: 1000px;
+        }
+
+        .card {
+            width: 100px;
+            height: 100px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card.matched {
+            opacity: 0.6;
+            cursor: default;
+        }
+
+        .card-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .card-front {
+            background: linear-gradient(135deg, rgba(124, 77, 255, 0.2), rgba(0, 229, 255, 0.1));
+            color: #fff;
+        }
+
+        .card-front::after {
+            content: '?';
+            font-weight: 800;
+            opacity: 0.3;
+        }
+
+        .card-back {
+            background: var(--bg-color);
+            transform: rotateY(180deg);
+            color: var(--accent-secondary);
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.2);
+            border-color: var(--accent-secondary);
+        }
+
+        .game-controls {
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .card.matched .card-back {
+            animation: pulse 0.5s ease-out;
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <div class="bg-glow-container">
+        <div class="glow-sphere sphere-1"></div>
+        <div class="glow-sphere sphere-2"></div>
+    </div>
+
+    <header class="main-header" style="position: relative; background: transparent; border: none;">
+        <div class="nav-container">
+            <a href="index.html" class="logo" style="text-decoration: none; color: inherit;">
+                <i data-lucide="arrow-left"></i>
+                <span>BACK TO <span class="accent-text">HUB</span></span>
+            </a>
+            <h2 style="font-weight:800; letter-spacing:-1px">NEURAL MEMORY</h2>
+        </div>
+    </header>
+
+    <div class="game-wrapper">
+        <div class="stats-bar">
+            <span>SCORE: <span class="stat-val" id="score">0</span></span>
+            <span>MOVES: <span class="stat-val" id="moves">0</span></span>
+            <span>BEST: <span class="stat-val" id="best">--</span></span>
+        </div>
+
+        <div class="game-body">
+            <div class="memory-grid" id="grid">
+                <!-- Cards injected by JS -->
+            </div>
+        </div>
+
+        <div class="game-controls">
+            <button class="btn-primary" onclick="initGame()">RESET NEURAL LINK</button>
+            <button class="btn-secondary" onclick="window.location.href='index.html'">EXIT SYSTEM</button>
+        </div>
+    </div>
+
+    <script src="../js/shared.js"></script>
+    <script>
+        lucide.createIcons();
+
+        const gridEl = document.getElementById('grid');
+        const scoreEl = document.getElementById('score');
+        const movesEl = document.getElementById('moves');
+        const bestEl = document.getElementById('best');
+
+        const icons = ['zap', 'cpu', 'database', 'globe', 'shield', 'activity', 'code', 'command'];
+        let cards = [];
+        let flippedCards = [];
+        let matchedCount = 0;
+        let score = 0;
+        let moves = 0;
+        let lockGrid = false;
+
+        function initGame() {
+            gridEl.innerHTML = '';
+            cards = [...icons, ...icons].sort(() => Math.random() - 0.5);
+            matchedCount = 0;
+            score = 0;
+            moves = 0;
+            flippedCards = [];
+            lockGrid = false;
+
+            scoreEl.innerText = score;
+            movesEl.innerText = moves;
+            bestEl.innerText = localStorage.getItem('memory_best') || '--';
+
+            cards.forEach((icon, index) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.dataset.icon = icon;
+                card.dataset.index = index;
+                card.innerHTML = `
+                    <div class="card-face card-front"></div>
+                    <div class="card-face card-back">
+                        <i data-lucide="${icon}"></i>
+                    </div>
+                `;
+                card.onclick = () => flipCard(card);
+                gridEl.appendChild(card);
+            });
+            lucide.createIcons();
+            if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('click');
+        }
+
+        function flipCard(card) {
+            if (lockGrid || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+
+            card.classList.add('flipped');
+            flippedCards.push(card);
+
+            if (flippedCards.length === 2) {
+                moves++;
+                movesEl.innerText = moves;
+                checkMatch();
+            } else {
+                if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('move');
+            }
+        }
+
+        async function checkMatch() {
+            lockGrid = true;
+            const [c1, c2] = flippedCards;
+            const isMatch = c1.dataset.icon === c2.dataset.icon;
+
+            if (isMatch) {
+                matchedCount += 2;
+                score += 100;
+                scoreEl.innerText = score;
+                c1.classList.add('matched');
+                c2.classList.add('matched');
+                if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('win');
+                flippedCards = [];
+                lockGrid = false;
+
+                if (matchedCount === cards.length) {
+                    win();
+                }
+            } else {
+                if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('loss');
+                await new Promise(r => setTimeout(r, 1000));
+                c1.classList.remove('flipped');
+                c2.classList.remove('flipped');
+                flippedCards = [];
+                lockGrid = false;
+            }
+        }
+
+        function win() {
+            const best = localStorage.getItem('memory_best') || 999;
+            if (moves < best) {
+                localStorage.setItem('memory_best', moves);
+                bestEl.innerText = moves;
+            }
+            GameHubStats.reportScore('neural-memory', score);
+            alert(`SYSTEM SYNCHRONIZED! Total Moves: ${moves}`);
+        }
+
+        initGame();
+    </script>
+</body>
+
+</html>

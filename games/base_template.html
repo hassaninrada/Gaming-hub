@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{TITLE}} | GameHub Pro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .game-wrapper {
+            max-width: 900px;
+            margin: 40px auto;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+        }
+
+        .game-header {
+            padding: 20px 40px;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .game-body {
+            flex: 1;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 500px;
+            position: relative;
+        }
+
+        .game-canvas-area {
+            background: #111;
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .game-controls {
+            padding: 30px;
+            background: rgba(0, 0, 0, 0.2);
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .stats-bar {
+            padding: 10px 40px;
+            background: rgba(124, 77, 255, 0.05);
+            display: flex;
+            gap: 30px;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .stat-val {
+            color: var(--accent-secondary);
+            margin-left: 5px;
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <div class="bg-glow-container">
+        <div class="glow-sphere sphere-1"></div>
+    </div>
+
+    <header class="main-header" style="position: relative; background: transparent; border: none;">
+        <div class="nav-container">
+            <a href="../index.html" class="logo" style="text-decoration: none; color: inherit;">
+                <i data-lucide="arrow-left"></i>
+                <span>BACK TO <span class="accent-text">HUB</span></span>
+            </a>
+            <h2 style="font-weight:800; letter-spacing:-1px">{{TITLE}}</h2>
+        </div>
+    </header>
+
+    <div class="game-wrapper">
+        <div class="stats-bar">
+            <span>SCORE: <span class="stat-val" id="score">0</span></span>
+            <span>HIGH SCORE: <span class="stat-val" id="best">0</span></span>
+            <span>LEVEL: <span class="stat-val" id="lvl">1</span></span>
+        </div>
+
+        <div class="game-body">
+            <div class="game-canvas-area">
+                {{CONTENT}}
+            </div>
+        </div>
+
+        <div class="game-controls">
+            <button class="btn-primary" onclick="startGame()">START GAME</button>
+            <button class="btn-secondary" onclick="location.reload()">RESTART</button>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        { { SCRIPTS } }
+    </script>
+</body>
+
+</html>

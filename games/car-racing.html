@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Nitro | GameHub Pro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .game-wrapper {
+            max-width: 600px;
+            margin: 40px auto;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+        }
+
+        .stats-bar {
+            padding: 15px 30px;
+            background: rgba(16, 185, 129, 0.1);
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--glass-border);
+            font-weight: 800;
+            text-transform: uppercase;
+            font-size: 14px;
+        }
+
+        .stat-group {
+            display: flex;
+            gap: 15px;
+        }
+
+        .stat-val {
+            color: #10b981;
+            margin-left: 5px;
+            text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+
+        .game-body {
+            position: relative;
+            background: #0f172a;
+            height: 600px;
+            overflow: hidden;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #gameCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+
+        .game-over-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+        }
+
+        .game-over-overlay h2 {
+            font-size: 48px;
+            color: #ef4444;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(239, 68, 68, 0.6);
+        }
+
+        .game-controls {
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.4);
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .control-key {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 10px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 12px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <div class="bg-glow-container">
+        <div class="glow-sphere sphere-1"></div>
+        <div class="glow-sphere sphere-2"></div>
+    </div>
+
+    <header class="main-header" style="position: relative; background: transparent; border: none;">
+        <div class="nav-container">
+            <a href="../index.html" class="logo" style="text-decoration: none; color: inherit;">
+                <i data-lucide="arrow-left"></i>
+                <span>BACK TO <span class="accent-text">HUB</span></span>
+            </a>
+            <h2 style="font-weight:800; letter-spacing:-1px">NEON NITRO</h2>
+        </div>
+    </header>
+
+    <div class="game-wrapper">
+        <div class="stats-bar">
+            <div class="stat-group">
+                <span>Score: <span id="scoreVal" class="stat-val">0</span></span>
+                <span>Speed: <span id="speedVal" class="stat-val">0</span> km/h</span>
+            </div>
+            <div class="stat-group">
+                <span>Nitro: <span id="nitroVal" class="stat-val">0%</span></span>
+            </div>
+        </div>
+
+        <div class="game-body">
+            <canvas id="gameCanvas"></canvas>
+            <div class="game-over-overlay" id="gameOver">
+                <h2>CRITICAL CRASH</h2>
+                <p style="margin-bottom:30px; font-size:18px; color:#94a3b8">Final Score: <span id="finalScore"
+                        style="color:#fff; font-weight:bold">0</span></p>
+                <div style="display:flex; gap:15px">
+                    <button class="btn-primary" onclick="resetGame()">REBOOT SYSTEM</button>
+                    <button class="btn-secondary" onclick="window.location.href='../index.html'">ABORT</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-controls">
+            <p class="hint-text">Steer: <span class="control-key">←</span> <span class="control-key">→</span> or <span
+                    class="control-key">A</span> <span class="control-key">D</span> &nbsp;|&nbsp; Boost: <span
+                    class="control-key">SPACE</span></p>
+        </div>
+    </div>
+
+    <script src="../js/shared.js"></script>
+    <script>
+        lucide.createIcons();
+
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Game State
+        let state = {
+            running: true,
+            score: 0,
+            speed: 10,
+            distance: 0,
+            laneCount: 4,
+            laneWidth: 100,
+            car: { lane: 1, x: 0, y: 0, w: 60, h: 100 },
+            obstacles: [],
+            coins: [],
+            particles: [],
+            nitro: 0,
+            isBoosting: false
+        };
+
+        // Assets (Procedural Drawing)
+
+        function resize() {
+            canvas.width = 600;
+            canvas.height = 600;
+            state.laneWidth = canvas.width / state.laneCount;
+            // Center car initially
+            state.car.x = getLaneCenter(1);
+            state.car.y = canvas.height - 150;
+        }
+
+        function getLaneCenter(laneIdx) {
+            return (laneIdx * state.laneWidth) + (state.laneWidth / 2);
+        }
+
+        function createParticles(x, y, color, count) {
+            for (let i = 0; i < count; i++) {
+                state.particles.push({
+                    x: x, y: y,
+                    vx: (Math.random() - 0.5) * 10,
+                    vy: (Math.random() - 0.5) * 10,
+                    life: 1.0,
+                    color: color
+                });
+            }
+        }
+
+        // Logic
+        function update() {
+            if (!state.running) return;
+
+            // Speed handling
+            let targetSpeed = 15 + (state.score / 500);
+            if (state.isBoosting && state.nitro > 0) {
+                targetSpeed *= 1.5;
+                state.nitro -= 1;
+                createParticles(state.car.x, state.car.y + 100, '#3b82f6', 2);
+            } else {
+                state.isBoosting = false;
+            }
+            state.speed += (targetSpeed - state.speed) * 0.1;
+            state.distance += state.speed;
+            state.score += Math.floor(state.speed / 5);
+
+            // Car movement (Smooth lane change)
+            const targetX = getLaneCenter(state.car.lane);
+            state.car.x += (targetX - state.car.x) * 0.15;
+
+            // Tilt effect
+            const tilt = (targetX - state.car.x) * 0.5;
+
+            // Spawn Obstacles
+            if (Math.random() < 0.02 + (state.score / 50000)) {
+                const lane = Math.floor(Math.random() * state.laneCount);
+                state.obstacles.push({
+                    lane: lane,
+                    x: getLaneCenter(lane),
+                    y: -150,
+                    w: 70,
+                    h: 120,
+                    color: Math.random() > 0.5 ? '#ef4444' : '#f59e0b'
+                });
+            }
+
+            // Spawn Coins/Nitro
+            if (Math.random() < 0.01) {
+                const lane = Math.floor(Math.random() * state.laneCount);
+                // Ensure no overlap with obstacles roughly
+                const isClear = !state.obstacles.some(o => Math.abs(o.y - -150) < 200 && o.lane === lane);
+                if (isClear) {
+                    const type = Math.random() > 0.8 ? 'nitro' : 'coin';
+                    state.coins.push({
+                        lane: lane,
+                        x: getLaneCenter(lane),
+                        y: -100,
+                        w: 40,
+                        h: 40,
+                        type: type
+                    });
+                }
+            }
+
+            // Move Entities
+            [state.obstacles, state.coins].forEach(arr => {
+                arr.forEach(e => e.y += state.speed);
+            });
+
+            // Cleanup off-screen
+            state.obstacles = state.obstacles.filter(e => e.y < canvas.height + 200);
+            state.coins = state.coins.filter(e => e.y < canvas.height + 200);
+
+            // Collisions
+            // Car hitbox
+            const buffer = 15;
+            const carLeft = state.car.x - state.car.w / 2 + buffer;
+            const carRight = state.car.x + state.car.w / 2 - buffer;
+            const carTop = state.car.y + buffer;
+            const carBottom = state.car.y + state.car.h - buffer;
+
+            state.obstacles.forEach(acc => {
+                const obsLeft = acc.x - acc.w / 2;
+                const obsRight = acc.x + acc.w / 2;
+                const obsTop = acc.y;
+                const obsBottom = acc.y + acc.h;
+
+                if (carLeft < obsRight && carRight > obsLeft &&
+                    carTop < obsBottom && carBottom > obsTop) {
+                    gameOver();
+                }
+            });
+
+            state.coins.forEach((c, i) => {
+                const cLeft = c.x - c.w / 2;
+                const cRight = c.x + c.w / 2;
+                const cTop = c.y;
+                const cBottom = c.y + c.h;
+
+                if (carLeft < cRight && carRight > cLeft &&
+                    carTop < cBottom && carBottom > cTop) {
+                    // Collect
+                    state.coins.splice(i, 1);
+                    if (c.type === 'coin') {
+                        state.score += 500;
+                        createParticles(c.x, c.y, '#ffd700', 10);
+                        if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('click');
+                    } else {
+                        state.nitro = Math.min(100, state.nitro + 50);
+                        createParticles(c.x, c.y, '#3b82f6', 15);
+                    }
+                }
+            });
+
+            // Particles
+            state.particles.forEach((p, i) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.05;
+                if (p.life <= 0) state.particles.splice(i, 1);
+            });
+
+            // UI Updates
+            document.getElementById('scoreVal').innerText = Math.floor(state.score / 10).toLocaleString();
+            document.getElementById('speedVal').innerText = Math.floor(state.speed * 10);
+            document.getElementById('nitroVal').innerText = Math.floor(state.nitro) + '%';
+        }
+
+        // Render
+        function draw() {
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Lanes
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            for (let i = 1; i < state.laneCount; i++) {
+                const x = i * state.laneWidth;
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+            }
+            ctx.stroke();
+
+            // Moving Road Strips
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+            const stripOffset = (state.distance * 2) % 100;
+            for (let y = -100; y < canvas.height; y += 100) {
+                ctx.fillRect(0, y + stripOffset, canvas.width, 20);
+            }
+
+            // Draw Obstacles
+            state.obstacles.forEach(o => {
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = o.color;
+                ctx.fillStyle = o.color;
+
+                // Simple 3D effect: Top rect light, side rect dark
+                ctx.fillRect(o.x - o.w / 2, o.y, o.w, o.h);
+
+                // Detail
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.fillRect(o.x - o.w / 2 + 5, o.y + 5, o.w - 10, o.h - 10);
+
+                ctx.shadowBlur = 0;
+            });
+
+            // Draw Coins
+            state.coins.forEach(c => {
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = c.type === 'nitro' ? '#3b82f6' : '#fbbf24';
+                ctx.fillStyle = c.type === 'nitro' ? '#3b82f6' : '#fbbf24';
+
+                ctx.beginPath();
+                ctx.arc(c.x, c.y + c.h / 2, c.w / 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#fff';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(c.type === 'nitro' ? 'N' : '$', c.x, c.y + c.h / 2);
+
+                ctx.shadowBlur = 0;
+            });
+
+            // Draw Car
+            const cx = state.car.x;
+            const cy = state.car.y;
+            const cw = state.car.w;
+            const ch = state.car.h;
+
+            // Car Body
+            ctx.shadowBlur = state.isBoosting ? 40 : 20;
+            ctx.shadowColor = '#00e5ff';
+            ctx.fillStyle = '#00e5ff';
+
+            // Main chassis
+            ctx.beginPath();
+            ctx.moveTo(cx - cw / 2, cy + ch);
+            ctx.lineTo(cx + cw / 2, cy + ch);
+            ctx.lineTo(cx + cw / 2 - 5, cy);
+            ctx.lineTo(cx - cw / 2 + 5, cy);
+            ctx.fill();
+
+            // Cockpit
+            ctx.fillStyle = '#000';
+            ctx.fillRect(cx - 10, cy + 20, 20, 30);
+
+            // Lights
+            ctx.shadowBlur = 0;
+            ctx.fillStyle = '#ef4444';
+            ctx.fillRect(cx - cw / 2 + 2, cy + ch - 5, 10, 5); // Rear lights
+            ctx.fillRect(cx + cw / 2 - 12, cy + ch - 5, 10, 5);
+
+            // Engine Flame if boosting
+            if (state.isBoosting) {
+                ctx.fillStyle = '#3b82f6';
+                ctx.beginPath();
+                ctx.moveTo(cx - 10, cy + ch);
+                ctx.lineTo(cx + 10, cy + ch);
+                ctx.lineTo(cx, cy + ch + 40 + Math.random() * 20);
+                ctx.fill();
+            }
+
+            // Draw Particles
+            state.particles.forEach(p => {
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, 4, 4);
+                ctx.globalAlpha = 1.0;
+            });
+        }
+
+        // Loop
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        // Input
+        window.addEventListener('keydown', e => {
+            if (!state.running) return;
+            if (e.key === 'ArrowLeft' || e.key === 'a') {
+                if (state.car.lane > 0) state.car.lane--;
+                if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('move');
+            }
+            if (e.key === 'ArrowRight' || e.key === 'd') {
+                if (state.car.lane < state.laneCount - 1) state.car.lane++;
+                if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('move');
+            }
+            if (e.key === ' ') { // Space
+                if (state.nitro > 0) state.isBoosting = true;
+            }
+        });
+
+        window.addEventListener('keyup', e => {
+            if (e.key === ' ') state.isBoosting = false;
+        });
+
+        // System
+        function gameOver() {
+            state.running = false;
+            document.getElementById('gameOver').style.display = 'flex';
+            document.getElementById('finalScore').innerText = Math.floor(state.score / 10).toLocaleString();
+            if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('loss');
+        }
+
+        function resetGame() {
+            state.running = true;
+            state.score = 0;
+            state.distance = 0;
+            state.speed = 10;
+            state.nitro = 0;
+            state.obstacles = [];
+            state.coins = [];
+            state.particles = [];
+            state.car.lane = 1;
+            document.getElementById('gameOver').style.display = 'none';
+        }
+
+        resize();
+        loop();
+    </script>
+</body>
+
+</html>

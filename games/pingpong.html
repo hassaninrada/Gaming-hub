@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ping Pong Go 3D - Ultimate Pro</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Outfit', sans-serif;
+            background: #000;
+        }
+
+        #ui {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* --- PREMIUM GAME HEADER --- */
+        .game-header-premium {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100px;
+            z-index: 1000;
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            padding: 0 40px;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .header-inner {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .hub-back {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            text-decoration: none;
+            color: #fff;
+            pointer-events: auto;
+            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .hub-back:hover {
+            transform: translateX(-5px) scale(1.05);
+        }
+
+        .back-icon-wrap {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            transition: 0.3s;
+        }
+
+        .hub-back:hover .back-icon-wrap {
+            border-color: #00f3ff;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
+            color: #00f3ff;
+        }
+
+        .hub-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1;
+        }
+
+        .hub-small {
+            font-size: 12px;
+            font-weight: 800;
+            color: rgba(255, 255, 255, 0.5);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .hub-main {
+            font-size: 26px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            text-transform: uppercase;
+        }
+
+        .hub-main .accent {
+            color: #00f3ff;
+            text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+        }
+
+        .game-title-badge {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 25px;
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            font-size: 18px;
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.7);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 40px;
+            border-radius: 20px;
+            border: 1px solid #00f3ff;
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.3);
+            pointer-events: auto;
+            color: white;
+            min-width: 350px;
+        }
+
+        h1 {
+            margin: 0 0 20px;
+            font-size: 42px;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            color: #00f3ff;
+            text-shadow: 0 0 10px #00f3ff;
+        }
+
+        button {
+            background: linear-gradient(45deg, #00f3ff, #0066ff);
+            border: none;
+            padding: 15px 40px;
+            color: white;
+            font-size: 18px;
+            font-weight: 800;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: 0.3s;
+            text-transform: uppercase;
+            margin: 10px;
+            box-shadow: 0 5px 15px rgba(0, 243, 255, 0.4);
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 25px #00f3ff;
+        }
+
+        .score-board {
+            position: absolute;
+            top: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 60px;
+            font-size: 60px;
+            font-weight: 900;
+            color: white;
+            text-shadow: 0 0 20px rgba(0, 243, 255, 0.8);
+        }
+
+        .score-label {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            opacity: 0.6;
+            text-align: center;
+        }
+
+        #message {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            color: #00f3ff;
+            opacity: 0;
+            transition: 0.5s;
+        }
+
+        #controls-info {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 14px;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="game-header-premium">
+        <div class="header-inner">
+            <a href="../index.html" class="hub-back">
+                <div class="back-icon-wrap">
+                    <i data-lucide="arrow-left" style="width:28px; height:28px"></i>
+                </div>
+                <div class="hub-text">
+                    <span class="hub-small">Return to</span>
+                    <span class="hub-main">GameHub <span class="accent">Pro</span></span>
+                </div>
+            </a>
+            <div class="game-title-badge">
+                <span>PING PONG GO!</span>
+            </div>
+        </div>
+    </header>
+
+    <div id="ui">
+        <div class="score-board">
+            <div>
+                <div class="score-label">Player</div><span id="player-score">0</span>
+            </div>
+            <div>
+                <div class="score-label">CPU</div><span id="cpu-score">0</span>
+            </div>
+        </div>
+
+        <div id="menu" class="overlay">
+            <h1>Ping Pong 3D</h1>
+            <p>Fast paced 3D Table Tennis</p>
+            <button onclick="startGame()">Start Game</button>
+            <p style="font-size: 12px; margin-top: 20px; opacity: 0.6;">Move mouse to control paddle</p>
+        </div>
+
+        <div id="game-over" class="overlay" style="display: none;">
+            <h1 id="result-title">Victory!</h1>
+            <p id="result-text">You scored 11 points</p>
+            <button onclick="restartGame()">Play Again</button>
+            <button onclick="window.location.href='../index.html'">Exit</button>
+        </div>
+
+        <div id="message">SMASH!</div>
+        <div id="controls-info">MOVE MOUSE TO PLAY</div>
+    </div>
+
+    <script>
+        let scene, camera, renderer, ball, playerPaddle, cpuPaddle, table;
+        let ballVelocity = new THREE.Vector3(0.15, 0, 0.15);
+        let playerScore = 0, cpuScore = 0;
+        let gameActive = false;
+        let tableWidth = 22, tableDepth = 44;
+        let paddleWidth = 6, paddleHeight = 0.5, paddleDepth = 3;
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x050508);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 15, 30);
+            camera.lookAt(0, 0, 0);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            document.body.appendChild(renderer.domElement);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 2);
+            scene.add(ambientLight);
+
+            const spotLight = new THREE.SpotLight(0xffffff, 1.5);
+            spotLight.position.set(0, 20, 0);
+            spotLight.castShadow = true;
+            scene.add(spotLight);
+
+            // Table
+            const tableGeo = new THREE.BoxGeometry(tableWidth, 1, tableDepth);
+            const tableMat = new THREE.MeshPhongMaterial({ color: 0x1a4fb0, shininess: 100 });
+            table = new THREE.Mesh(tableGeo, tableMat);
+            table.receiveShadow = true;
+            scene.add(table);
+
+            // Table Lines
+            const lineMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            const centerLine = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.01, tableDepth), lineMat);
+            scene.add(centerLine);
+
+            const netGeo = new THREE.BoxGeometry(tableWidth + 2, 2, 0.2);
+            const netMat = new THREE.MeshPhongMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 });
+            const net = new THREE.Mesh(netGeo, netMat);
+            net.position.y = 1.5;
+            scene.add(net);
+
+            // Rackets (Paddles)
+            function createRacket(color) {
+                const group = new THREE.Group();
+
+                // Blade (Circular part)
+                const bladeGeo = new THREE.CylinderGeometry(1.5, 1.5, 0.2, 32);
+                const bladeMat = new THREE.MeshPhongMaterial({ color: color, emissive: 0x222222 });
+                const blade = new THREE.Mesh(bladeGeo, bladeMat);
+                blade.rotation.x = Math.PI / 2;
+                group.add(blade);
+
+                // Handle
+                const handleGeo = new THREE.BoxGeometry(0.5, 2, 0.3);
+                const handleMat = new THREE.MeshPhongMaterial({ color: 0x8b4513 }); // Wooden color
+                const handle = new THREE.Mesh(handleGeo, handleMat);
+                handle.position.y = -2;
+                group.add(handle);
+
+                group.castShadow = true;
+                return group;
+            }
+
+            playerPaddle = createRacket(0x00f2ff);
+            playerPaddle.position.set(0, 2.5, tableDepth / 2 - 2);
+            playerPaddle.rotation.y = Math.PI; // Face the net
+            playerPaddle.rotation.x = -Math.PI / 8; // Slight tilt for realism
+            scene.add(playerPaddle);
+
+            cpuPaddle = createRacket(0xff0066);
+            cpuPaddle.position.set(0, 2.5, -tableDepth / 2 + 2);
+            cpuPaddle.rotation.y = 0; // Face the net
+            cpuPaddle.rotation.x = Math.PI / 8;
+            scene.add(cpuPaddle);
+
+            // Ball
+            const ballGeo = new THREE.SphereGeometry(0.6, 32, 32);
+            const ballMat = new THREE.MeshPhongMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.2 });
+            ball = new THREE.Mesh(ballGeo, ballMat);
+            ball.position.set(0, 1.5, 0);
+            ball.castShadow = true;
+            scene.add(ball);
+
+            // Particles for hit
+            createParticlesPool();
+
+            window.addEventListener('resize', onWindowResize, false);
+            document.addEventListener('mousemove', onMouseMove, false);
+
+            animate();
+        }
+
+        const particles = [];
+        function createParticlesPool() {
+            for (let i = 0; i < 20; i++) {
+                const p = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), new THREE.MeshBasicMaterial({ color: 0x00f3ff }));
+                p.visible = false;
+                scene.add(p);
+                particles.push({ mesh: p, life: 0 });
+            }
+        }
+
+        function emitParticles(pos, color) {
+            particles.forEach(p => {
+                if (!p.mesh.visible) {
+                    p.mesh.position.copy(pos);
+                    p.mesh.visible = true;
+                    p.mesh.material.color.set(color);
+                    p.life = 1.0;
+                    p.vel = new THREE.Vector3((Math.random() - 0.5) * 0.5, Math.random() * 0.5, (Math.random() - 0.5) * 0.5);
+                }
+            });
+        }
+
+        function onMouseMove(event) {
+            if (!gameActive) return;
+            const x = (event.clientX / window.innerWidth) * 2 - 1;
+            playerPaddle.position.x = x * (tableWidth / 2 - 2);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function startGame() {
+            document.getElementById('menu').style.display = 'none';
+            gameActive = true;
+            resetBall();
+        }
+
+        function restartGame() {
+            playerScore = 0;
+            cpuScore = 0;
+            document.getElementById('player-score').innerText = '0';
+            document.getElementById('cpu-score').innerText = '0';
+            document.getElementById('game-over').style.display = 'none';
+            startGame();
+        }
+
+        function resetBall() {
+            ball.position.set(0, 1.5, 0);
+            const speed = 0.25;
+            ballVelocity.set((Math.random() - 0.5) * 0.15, 0, (Math.random() > 0.5 ? 1 : -1) * speed);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (gameActive) {
+                ball.position.add(ballVelocity);
+
+                // Ball bounce off table sides
+                if (Math.abs(ball.position.x) > tableWidth / 2 - 0.5) {
+                    ballVelocity.x *= -1;
+                    emitParticles(ball.position, 0xffffff);
+                }
+
+                // AI Logic (Slightly slower for balance)
+                const cpuTargetX = ball.position.x;
+                cpuPaddle.position.x += (cpuTargetX - cpuPaddle.position.x) * 0.08;
+                cpuPaddle.position.x = Math.max(-tableWidth / 2 + 2, Math.min(tableWidth / 2 - 2, cpuPaddle.position.x));
+
+                // Collision Player (Forgiving hit area)
+                if (ball.position.z > playerPaddle.position.z - 1.2 && ball.position.z < playerPaddle.position.z + 1) {
+                    if (Math.abs(ball.position.x - playerPaddle.position.x) < paddleWidth / 2 + 1) {
+                        ballVelocity.z *= -1.04; // Slower speed increase
+                        ballVelocity.x += (ball.position.x - playerPaddle.position.x) * 0.2;
+                        ball.position.z = playerPaddle.position.z - 1.3;
+                        emitParticles(ball.position, 0x00f3ff);
+                        showMessage("HIT!");
+                    }
+                }
+
+                // Collision CPU
+                if (ball.position.z < cpuPaddle.position.z + 1 && ball.position.z > cpuPaddle.position.z - 1) {
+                    if (Math.abs(ball.position.x - cpuPaddle.position.x) < paddleWidth / 2 + 0.5) {
+                        ballVelocity.z *= -1.05;
+                        ballVelocity.x += (ball.position.x - cpuPaddle.position.x) * 0.2;
+                        ball.position.z = cpuPaddle.position.z + 1.1;
+                        emitParticles(ball.position, 0xff3366);
+                    }
+                }
+
+                // Out of bounds / Scoring
+                if (ball.position.z > tableDepth / 2 + 5) {
+                    cpuScore++;
+                    updateScore();
+                    resetBall();
+                } else if (ball.position.z < -tableDepth / 2 - 5) {
+                    playerScore++;
+                    updateScore();
+                    resetBall();
+                }
+
+                // Rotate ball slightly
+                ball.rotation.x += 0.1;
+                ball.rotation.y += 0.1;
+            }
+
+            // Update particles
+            particles.forEach(p => {
+                if (p.mesh.visible) {
+                    p.mesh.position.add(p.vel);
+                    p.life -= 0.02;
+                    p.mesh.scale.setScalar(p.life);
+                    if (p.life <= 0) p.mesh.visible = false;
+                }
+            });
+
+            renderer.render(scene, camera);
+        }
+
+        function updateScore() {
+            document.getElementById('player-score').innerText = playerScore;
+            document.getElementById('cpu-score').innerText = cpuScore;
+
+            if (playerScore >= 11 || cpuScore >= 11) {
+                endGame();
+            }
+        }
+
+        function endGame() {
+            gameActive = false;
+            document.getElementById('game-over').style.display = 'block';
+            document.getElementById('result-title').innerText = playerScore >= 11 ? "Victory!" : "Defeated!";
+            document.getElementById('result-text').innerText = `Final Score: ${playerScore} - ${cpuScore}`;
+            document.getElementById('result-title').style.color = playerScore >= 11 ? "#00f3ff" : "#ff3366";
+        }
+
+        function showMessage(txt) {
+            const el = document.getElementById('message');
+            el.innerText = txt;
+            el.style.opacity = 1;
+            setTimeout(() => el.style.opacity = 0, 1000);
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

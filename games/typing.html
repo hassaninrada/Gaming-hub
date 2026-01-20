@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Typing Elite 2.0 | GameHub Pro</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .game-wrapper {
+      max-width: 800px;
+      margin: 40px auto;
+      background: var(--card-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 24px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(20px);
+    }
+
+    .stats-bar {
+      padding: 15px 40px;
+      background: rgba(124, 77, 255, 0.1);
+      display: flex;
+      justify-content: space-around;
+      font-size: 14px;
+      font-weight: 800;
+      border-bottom: 1px solid var(--glass-border);
+    }
+
+    .stat-val {
+      color: var(--accent-secondary);
+      margin-left: 5px;
+      font-size: 18px;
+    }
+
+    .game-body {
+      position: relative;
+      background: #000;
+      height: 500px;
+      display: flex;
+      justify-content: center;
+      overflow: hidden;
+      font-family: 'Courier New', Courier, monospace;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    .input-bar {
+      position: absolute;
+      bottom: 20px;
+      width: 80%;
+      padding: 15px;
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid #0f0;
+      border-radius: 8px;
+      color: #0f0;
+      font-size: 24px;
+      text-align: center;
+      outline: none;
+      box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+      font-family: 'Courier New', monospace;
+      text-transform: uppercase;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+  </style>
+</head>
+
+<body class="dark-theme">
+  <div class="bg-glow-container">
+    <div class="glow-sphere sphere-1"></div>
+    <div class="glow-sphere sphere-2"></div>
+  </div>
+
+  <header class="main-header" style="position: relative; background: transparent; border: none;">
+    <div class="nav-container">
+      <a href="../index.html" class="logo" style="text-decoration: none; color: inherit;">
+        <i data-lucide="arrow-left"></i>
+        <span>BACK TO <span class="accent-text">HUB</span></span>
+      </a>
+      <h2 style="font-weight:800; letter-spacing:-1px">TYPING DEFENSE</h2>
+    </div>
+  </header>
+
+  <div class="game-wrapper">
+    <div class="stats-bar">
+      <span>SCORE: <span class="stat-val" id="score">0</span></span>
+      <span>WAVE: <span class="stat-val" id="wave">1</span></span>
+      <span>INTEGRITY: <span class="stat-val" id="health">100%</span></span>
+    </div>
+
+    <div class="game-body" onclick="document.getElementById('inputField').focus()">
+      <canvas id="gameCanvas" width="800" height="500"></canvas>
+      <input type="text" id="inputField" class="input-bar" placeholder="TYPE TO INTERCEPT..." oninput="checkInput()"
+        onblur="this.focus()" autofocus>
+
+      <div class="overlay" id="startScreen" style="display:flex">
+        <h1 style="color:#0f0; font-size:48px; text-shadow:0 0 10px #0f0">SYSTEM LINK</h1>
+        <p style="color:#aaa; cursor:pointer" onclick="startGame()">INITIATE DEFENSE PROTOCOL</p>
+      </div>
+
+      <div class="overlay" id="gameOverScreen">
+        <h1 style="color:red; font-size:48px; margin-bottom:10px">SYSTEM FAILURE</h1>
+        <p>FINAL SCORE: <span id="finalScore" style="color:#fff">0</span></p>
+        <p style="color:#aaa; font-size:12px; margin-top:20px">[PRESS ENTER TO REBOOT]</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="../js/shared.js"></script>
+  <script>
+    lucide.createIcons();
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const input = document.getElementById('inputField');
+
+    let words = [];
+    let particles = [];
+    let score = 0;
+    let health = 100;
+    let wave = 1;
+    let active = false;
+    let lastSpawn = 0;
+    let spawnRate = 2000;
+
+    const VOCAB = ["ACCESS", "BINARY", "CIPHER", "DATA", "ENCRYPT", "FIREWALL", "GLITCH", "HACKER", "INPUT", "JAVA", "KERNEL", "LOGIN", "MATRIX", "NETWORK", "OUTPUT", "PIXEL", "QUERY", "ROOT", "SERVER", "TOKEN", "USER", "VIRUS", "WEB", "ZERO", "ALGORITHM", "BANDWIDTH", "CACHE", "DEBUG", "ETHERNET", "FRAME", "GIGABYTE", "HARDWARE", "INTERFACE"];
+
+    function startGame() {
+      active = true;
+      score = 0; health = 100; wave = 1; spawnRate = 2000;
+      words = []; particles = [];
+      document.getElementById('startScreen').style.display = 'none';
+      document.getElementById('gameOverScreen').style.display = 'none';
+      updateUI();
+      input.value = '';
+      input.focus();
+      loop();
+    }
+
+    function spawnWord() {
+      let txt = VOCAB[Math.floor(Math.random() * VOCAB.length)];
+      // Only spawn if not already on screen
+      if (!words.some(w => w.text === txt)) {
+        let w = {
+          text: txt,
+          x: Math.random() * 600 + 50,
+          y: -30,
+          speed: 0.5 + wave * 0.2, // Scaling speed
+          matchedLen: 0
+        };
+        words.push(w);
+      }
+    }
+
+    function checkInput() {
+      let val = input.value.toUpperCase();
+
+      // Highlight partials logic?
+      // "Z-Type" style: Detect if current input matches PREXIF of any word.
+      // If full match, destroy.
+
+      // Find word that starts with val
+      let targetIdx = words.findIndex(w => w.text === val);
+
+      if (targetIdx !== -1) {
+        // Destroy
+        let t = words[targetIdx];
+        createExplosion(t.x, t.y);
+        words.splice(targetIdx, 1);
+        score += t.text.length * 10;
+        input.value = '';
+        if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('win');
+
+        // Difficulty
+        if (score > wave * 500) { wave++; spawnRate *= 0.9; }
+        updateUI();
+      } else {
+        // Check if valid prefix?
+        // Visual feedback only
+      }
+    }
+
+    function createExplosion(x, y) {
+      for (let i = 0; i < 15; i++) {
+        particles.push({
+          x: x + 20, y: y,
+          vx: (Math.random() - 0.5) * 5, vy: (Math.random() - 0.5) * 5,
+          life: 1.0, color: '#0f0'
+        });
+      }
+    }
+
+    function update() {
+      if (!active) return;
+
+      if (Date.now() - lastSpawn > spawnRate) {
+        spawnWord();
+        lastSpawn = Date.now();
+      }
+
+      words.forEach((w, i) => {
+        w.y += w.speed;
+        // Hit bottom?
+        if (w.y > 450) {
+          health -= 10;
+          createExplosion(w.x, w.y);
+          words.splice(i, 1);
+          if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('loss');
+          updateUI();
+          if (health <= 0) gameOver();
+        }
+      });
+
+      particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.life -= 0.05; });
+      particles = particles.filter(p => p.life > 0);
+    }
+
+    function gameOver() {
+      active = false;
+      document.getElementById('finalScore').innerText = score;
+      document.getElementById('gameOverScreen').style.display = 'flex';
+    }
+
+    function draw() {
+      ctx.fillStyle = '#050505';
+      ctx.fillRect(0, 0, 800, 500);
+
+      // Matrix Rain Effect (Simple)
+      ctx.fillStyle = 'rgba(0, 255, 0, 0.05)';
+      ctx.font = '14px Courier';
+      if (Math.random() > 0.5) ctx.fillText(String.fromCharCode(0x30A0 + Math.random() * 96), Math.random() * 800, Math.random() * 500);
+
+      // Words
+      ctx.shadowBlur = 10;
+      words.forEach(w => {
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 24px Courier New';
+        ctx.shadowColor = '#0f0';
+
+        // Matched part logic visual?
+        let val = input.value.toUpperCase();
+        if (val.length > 0 && w.text.startsWith(val)) {
+          // Draw matched part green
+          ctx.fillStyle = '#0f0';
+          ctx.fillText(w.text.substring(0, val.length), w.x, w.y);
+          ctx.fillStyle = '#fff';
+          let w1 = ctx.measureText(w.text.substring(0, val.length)).width;
+          ctx.fillText(w.text.substring(val.length), w.x + w1, w.y);
+
+          // Connection line
+          ctx.strokeStyle = '#0f0';
+          ctx.beginPath(); ctx.moveTo(400, 480); ctx.lineTo(w.x + 20, w.y + 10); ctx.stroke();
+        } else {
+          ctx.fillStyle = '#fff';
+          ctx.fillText(w.text, w.x, w.y);
+        }
+      });
+      ctx.shadowBlur = 0;
+
+      // Particles
+      particles.forEach(p => {
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = p.life;
+        ctx.fillRect(p.x, p.y, 3, 3);
+      });
+      ctx.globalAlpha = 1;
+
+      // Defense Base
+      ctx.fillStyle = '#0f0';
+      ctx.fillRect(0, 480, 800, 2);
+    }
+
+    function updateUI() {
+      document.getElementById('score').innerText = score;
+      document.getElementById('wave').innerText = wave;
+      document.getElementById('health').innerText = health + '%';
+      document.getElementById('health').style.color = health < 40 ? 'red' : '#00e5ff';
+    }
+
+    function loop() {
+      update();
+      draw();
+      if (active) requestAnimationFrame(loop);
+    }
+
+    window.addEventListener('keydown', e => {
+      if (!active && e.key === 'Enter') startGame();
+    });
+
+    // Initial render
+    draw();
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe Pro | GameHub Pro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .game-wrapper {
+            max-width: 500px;
+            margin: 40px auto;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+        }
+
+        .stats-bar {
+            padding: 15px 40px;
+            background: rgba(124, 77, 255, 0.1);
+            display: flex;
+            justify-content: space-around;
+            font-size: 14px;
+            font-weight: 800;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .stat-val {
+            color: var(--accent-secondary);
+            margin-left: 5px;
+        }
+
+        .game-body {
+            padding: 40px;
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: center;
+        }
+
+        .ttt-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            gap: 15px;
+        }
+
+        .cell {
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            font-weight: 900;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .cell:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(1.05);
+        }
+
+        .cell.x {
+            color: var(--accent-secondary);
+            text-shadow: 0 0 20px var(--accent-secondary);
+        }
+
+        .cell.o {
+            color: var(--accent-primary);
+            text-shadow: 0 0 20px var(--accent-primary);
+        }
+
+        .game-controls {
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <div class="bg-glow-container">
+        <div class="glow-sphere sphere-1"></div>
+        <div class="glow-sphere sphere-2"></div>
+    </div>
+
+    <header class="main-header" style="position: relative; background: transparent; border: none;">
+        <div class="nav-container">
+            <a href="../index.html" class="logo" style="text-decoration: none; color: inherit;">
+                <i data-lucide="arrow-left"></i>
+                <span>BACK TO <span class="accent-text">HUB</span></span>
+            </a>
+            <h2 style="font-weight:800; letter-spacing:-1px">TIC-TAC-TOE PRO</h2>
+        </div>
+    </header>
+
+    <div class="game-wrapper">
+        <div class="stats-bar">
+            <span>PLAYER (X): <span class="stat-val" id="px">0</span></span>
+            <span>AI (O): <span class="stat-val" id="po">0</span></span>
+        </div>
+
+        <div class="game-body">
+            <div class="ttt-grid" id="grid"></div>
+        </div>
+
+        <div class="game-controls">
+            <button class="btn-primary" onclick="initGame()">RESET ARENA</button>
+            <button class="btn-secondary" onclick="goBack()">EXIT</button>
+        </div>
+    </div>
+
+    <script src="../js/shared.js"></script>
+    <script>
+        lucide.createIcons();
+
+        let board = Array(9).fill(''), turn = 'X', gameOver = false;
+        let scoreX = 0, scoreO = 0;
+        let difficulty = 'hard';
+
+        function initGame() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            board = Array(9).fill('');
+            gameOver = false;
+            turn = 'X';
+
+            for (let i = 0; i < 9; i++) {
+                const el = document.createElement('div');
+                el.className = 'cell';
+                el.onclick = () => play(i);
+                grid.appendChild(el);
+            }
+            if (typeof GameHubAudio !== 'undefined') GameHubAudio.playMusic();
+        }
+
+        function play(idx) {
+            if (board[idx] !== '' || gameOver) return;
+            board[idx] = turn;
+            const cells = document.querySelectorAll('.cell');
+            cells[idx].textContent = turn;
+            cells[idx].classList.add(turn.toLowerCase());
+
+            if (checkWin(turn)) {
+                gameOver = true;
+                if (turn === 'X') {
+                    if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('win');
+                    scoreX++;
+                    GameHubStats.reportScore('tictactoe', 100);
+                } else {
+                    if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('loss');
+                    scoreO++;
+                }
+                updateScore();
+                return;
+            }
+            if (board.every(cell => cell !== '')) {
+                gameOver = true;
+                return;
+            }
+
+            if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('move');
+            turn = turn === 'X' ? 'O' : 'X';
+            if (turn === 'O') setTimeout(aiMove, 500);
+        }
+
+        function aiMove() {
+            if (gameOver) return;
+            let move;
+
+            if (difficulty === 'easy') {
+                const available = board.map((v, i) => v === '' ? i : -1).filter(i => i !== -1);
+                move = available[Math.floor(Math.random() * available.length)];
+            } else {
+                let bestScore = -Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (board[i] === '') {
+                        board[i] = 'O';
+                        let score = minimax(board, 0, false);
+                        board[i] = '';
+                        if (score > bestScore) {
+                            bestScore = score;
+                            move = i;
+                        }
+                    }
+                }
+            }
+            if (move !== undefined) play(move);
+        }
+
+        function minimax(board, depth, isMaximizing) {
+            let result = checkWinner();
+            if (result !== null) {
+                return result === 'O' ? 10 - depth : result === 'X' ? depth - 10 : 0;
+            }
+
+            if (isMaximizing) {
+                let bestScore = -Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (board[i] === '') {
+                        board[i] = 'O';
+                        let score = minimax(board, depth + 1, false);
+                        board[i] = '';
+                        bestScore = Math.max(score, bestScore);
+                    }
+                }
+                return bestScore;
+            } else {
+                let bestScore = Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (board[i] === '') {
+                        board[i] = 'X';
+                        let score = minimax(board, depth + 1, true);
+                        board[i] = '';
+                        bestScore = Math.min(score, bestScore);
+                    }
+                }
+                return bestScore;
+            }
+        }
+
+        function checkWinner() {
+            const wins = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+            for (let w of wins) {
+                if (board[w[0]] && board[w[0]] === board[w[1]] && board[w[0]] === board[w[2]]) {
+                    return board[w[0]];
+                }
+            }
+            if (board.every(cell => cell !== '')) return 'tie';
+            return null;
+        }
+
+        function checkWin(t) {
+            const wins = [[0, 1, 2], [3, 4, 5], [6, 7, 8], [0, 3, 6], [1, 4, 7], [2, 5, 8], [0, 4, 8], [2, 4, 6]];
+            return wins.some(w => w.every(i => board[i] === t));
+        }
+
+        function updateScore() {
+            document.getElementById('px').textContent = scoreX;
+            document.getElementById('po').textContent = scoreO;
+        }
+
+        function setDifficulty(d) {
+            difficulty = d;
+            initGame();
+        }
+
+        function goBack() {
+            if (typeof GameHubAudio !== 'undefined') GameHubAudio.stopMusic();
+            window.location.href = '../index.html';
+        }
+        initGame();
+    </script>
+</body>
+
+</html>

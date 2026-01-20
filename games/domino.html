@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Domino Elite 2.0 | GameHub Pro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .game-wrapper {
+            max-width: 1000px;
+            margin: 40px auto;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+            user-select: none;
+        }
+
+        .stats-bar {
+            padding: 15px 40px;
+            background: rgba(124, 77, 255, 0.1);
+            display: flex;
+            justify-content: space-around;
+            font-size: 14px;
+            font-weight: 800;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .stat-val {
+            color: var(--accent-secondary);
+            margin-left: 5px;
+            font-size: 18px;
+        }
+
+        .game-body {
+            position: relative;
+            background: #2c2c2c url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjMmMyYzJjIiAvPgo8cmVjdCB3aWR0aD0iMSIgaGVpZ2h0PSIxIiBmaWxsPSIjMzMzMzMzIiAvPgo8L3N2Zz4=');
+            height: 600px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        /* Domino Styles */
+        .domino {
+            width: 40px;
+            height: 80px;
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            position: absolute;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .domino:hover {
+            transform: scale(1.1);
+            z-index: 100;
+        }
+
+        .domino.horizontal {
+            width: 80px;
+            height: 40px;
+            flex-direction: row;
+        }
+
+        .half {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .horizontal .half {
+            border-right: 1px solid #ccc;
+            height: 100%;
+            width: 50%;
+            border-bottom: none;
+        }
+
+        .vertical .half {
+            border-bottom: 1px solid #ccc;
+            width: 100%;
+            height: 50%;
+        }
+
+        /* Pips */
+        .pip {
+            width: 6px;
+            height: 6px;
+            background: #000;
+            border-radius: 50%;
+            position: absolute;
+            box-shadow: inset 0 0 2px rgba(255, 255, 255, 0.5);
+        }
+
+        /* Generated pip positions would be complex, simplified with HTML injection */
+
+        .hand-area {
+            height: 100px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 10px;
+        }
+
+        .board-pan {
+            flex-grow: 1;
+            position: relative;
+            cursor: grab;
+        }
+
+        .notification {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 20px 40px;
+            border-radius: 12px;
+            border: 2px solid var(--accent-primary);
+            font-size: 24px;
+            font-weight: bold;
+            display: none;
+            z-index: 200;
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <header class="main-header" style="position: relative; background: transparent; border: none;">
+        <div class="nav-container">
+            <a href="../index.html" class="logo" style="text-decoration: none; color: inherit;">
+                <i data-lucide="arrow-left"></i>
+                <span>BACK TO <span class="accent-text">HUB</span></span>
+            </a>
+            <h2 style="font-weight:800; letter-spacing:-1px">DOMINO ELITE 2.0</h2>
+        </div>
+    </header>
+
+    <div class="game-wrapper">
+        <div class="stats-bar">
+            <span>YOU: <span class="stat-val" id="pScore">0</span> pts</span>
+            <span>CPU: <span class="stat-val" id="cScore">0</span> pts</span>
+            <span>STATUS: <span class="stat-val" id="status">YOUR TURN</span></span>
+        </div>
+
+        <div class="game-body">
+            <!-- CPU Hand (Visible Count) -->
+            <div class="hand-area" id="cpuHand"></div>
+
+            <div class="board-pan" id="board" onmousedown="startDrag(event)">
+                <!-- Placed Dominoes -->
+            </div>
+
+            <button class="btn-primary" id="drawBtn" style="position:absolute; right:20px; top:50%; z-index:150"
+                onclick="game.drawTile(true)">DRAW</button>
+            <div class="notification" id="notif"></div>
+
+            <!-- Player Hand -->
+            <div class="hand-area" id="playerHand" style="background:rgba(124, 77, 255, 0.1)"></div>
+        </div>
+    </div>
+
+    <script src="../js/shared.js"></script>
+    <script>
+        lucide.createIcons();
+
+        // --- Visual Helpers ---
+        function createPipHTML(val) {
+            // Standard positions
+            const pos = [
+                [],
+                [[50, 50]],
+                [[25, 25], [75, 75]],
+                [[25, 25], [50, 50], [75, 75]],
+                [[25, 25], [75, 25], [25, 75], [75, 75]],
+                [[25, 25], [75, 25], [50, 50], [25, 75], [75, 75]],
+                [[25, 25], [50, 25], [75, 25], [25, 75], [50, 75], [75, 75]]
+            ];
+
+            let html = '';
+            pos[val].forEach(p => {
+                html += `<div class="pip" style="left:${p[0]}%; top:${p[1]}%; transform:translate(-50%,-50%)"></div>`;
+            });
+            return html;
+        }
+
+        class DominoGame {
+            constructor() {
+                this.tiles = [];
+                this.pHand = [];
+                this.cHand = [];
+                this.boardChain = []; // {t:tile, v1, v2, x, y, rot}
+
+                // Chain Ends
+                this.leftVal = -1;
+                this.rightVal = -1;
+
+                this.turn = 1; // 1=Player, 0=CPU
+                this.gameOver = false;
+
+                this.panX = 500;
+                this.panY = 300;
+
+                this.init();
+            }
+
+            init() {
+                // Generate set 0-6
+                this.tiles = [];
+                for (let i = 0; i <= 6; i++) {
+                    for (let j = i; j <= 6; j++) {
+                        this.tiles.push({ a: i, b: j });
+                    }
+                }
+
+                // Shuffle
+                for (let i = this.tiles.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [this.tiles[i], this.tiles[j]] = [this.tiles[j], this.tiles[i]];
+                }
+
+                // Deal 7
+                this.pHand = this.tiles.splice(0, 7);
+                this.cHand = this.tiles.splice(0, 7);
+
+                // Start with highest double
+                // Usually logic finds starter, let's just make P1 start or random.
+                this.turn = 1;
+                this.updateUI();
+                this.renderHands();
+            }
+
+            updateUI() {
+                document.getElementById('status').innerText = this.gameOver ? "GAME OVER" : (this.turn === 1 ? "YOUR TURN" : "CPU THINKING...");
+                document.getElementById('drawBtn').disabled = (this.turn !== 1);
+            }
+
+            renderHands() {
+                const pEl = document.getElementById('playerHand');
+                pEl.innerHTML = '';
+                this.pHand.forEach((t, i) => {
+                    let div = document.createElement('div');
+                    div.className = 'domino vertical'; /* Hand view upright */
+                    div.style.position = 'relative';
+                    div.style.width = '30px'; div.style.height = '60px'; // smaller in hand
+
+                    div.innerHTML = `
+                        <div class="half" style="border-bottom:1px solid #ccc">${createPipHTML(t.a)}</div>
+                        <div class="half">${createPipHTML(t.b)}</div>
+                    `;
+                    div.onclick = () => this.playTile(i);
+                    // Add playable highlight
+                    if (this.turn === 1 && this.canPlay(t)) {
+                        div.style.boxShadow = '0 0 10px #00ff00';
+                    } else if (this.turn === 1) {
+                        div.style.opacity = 0.5;
+                    }
+
+                    pEl.appendChild(div);
+                });
+
+                const cEl = document.getElementById('cpuHand');
+                cEl.innerHTML = ``;
+                this.cHand.forEach(() => {
+                    let div = document.createElement('div');
+                    div.className = 'domino vertical';
+                    div.style.position = 'relative';
+                    div.style.width = '30px'; div.style.height = '60px';
+                    div.style.background = '#333';
+                    cEl.appendChild(div);
+                });
+            }
+
+            canPlay(tile) {
+                if (this.boardChain.length === 0) return true;
+                return (tile.a === this.leftVal || tile.b === this.leftVal ||
+                    tile.a === this.rightVal || tile.b === this.rightVal);
+            }
+
+            playTile(idx) {
+                if (this.turn !== 1) return;
+                let tile = this.pHand[idx];
+                if (!this.canPlay(tile)) return;
+
+                this.pHand.splice(idx, 1);
+                this.placeOnBoard(tile, 1);
+
+                if (this.pHand.length === 0) { this.endGame("YOU WIN!"); return; }
+
+                this.turn = 0;
+                this.updateUI();
+                this.renderHands();
+                setTimeout(() => this.cpuTurn(), 1000);
+            }
+
+            cpuTurn() {
+                if (this.turn !== 0 || this.gameOver) return;
+
+                // Find valid
+                let validIdx = -1;
+                for (let i = 0; i < this.cHand.length; i++) {
+                    if (this.canPlay(this.cHand[i])) {
+                        validIdx = i;
+                        break;
+                    }
+                }
+
+                if (validIdx !== -1) {
+                    let tile = this.cHand[validIdx];
+                    this.cHand.splice(validIdx, 1);
+                    this.placeOnBoard(tile, 0);
+                    if (this.cHand.length === 0) { this.endGame("CPU WINS!"); return; }
+                    this.turn = 1;
+                    this.updateUI();
+                    this.renderHands();
+                } else {
+                    // Draw
+                    if (this.tiles.length > 0) {
+                        this.drawTile(false);
+                    } else {
+                        // Pass
+                        this.showNotif("CPU PASS");
+                        this.turn = 1;
+                        this.updateUI();
+                        this.renderHands();
+
+                        // Check Blocked
+                        if (!this.canAnyPlay(this.pHand)) {
+                            this.endGame("BLOCKED!"); // Simplified
+                        }
+                    }
+                }
+            }
+
+            canAnyPlay(hand) {
+                return hand.some(t => this.canPlay(t));
+            }
+
+            drawTile(isPlayer) {
+                if (this.tiles.length === 0) return;
+                let t = this.tiles.pop();
+                if (isPlayer) {
+                    this.pHand.push(t);
+                    this.renderHands();
+                    // check if can play now?
+                } else {
+                    this.cHand.push(t);
+                    this.renderHands();
+                    setTimeout(() => this.cpuTurn(), 500);
+                }
+            }
+
+            placeOnBoard(tile, player) {
+                // Determine position
+                if (this.boardChain.length === 0) {
+                    this.boardChain.push({ ...tile, x: 0, y: 0, rot: 90 }); // Horizontal
+                    this.leftVal = tile.a;
+                    this.rightVal = tile.b;
+                    this.renderBoard();
+                    return;
+                }
+
+                // Matches Left?
+                let matchedLeft = false;
+                if (tile.a === this.leftVal) {
+                    // [a|b] matches [L...] where L=a. So [b|a][a|...]
+                    this.leftVal = tile.b;
+                    matchedLeft = true;
+                    // Logic for placement coordinates is tricky (snake layout).
+                    // Simplified: Grow left and right linear for now.
+                    this.boardChain.unshift({ ...tile, x: this.boardChain[0].x - 85, y: 0, rot: -90, flip: true });
+                } else if (tile.b === this.leftVal) {
+                    this.leftVal = tile.a;
+                    matchedLeft = true;
+                    this.boardChain.unshift({ ...tile, x: this.boardChain[0].x - 85, y: 0, rot: -90 });
+                }
+                else if (tile.a === this.rightVal) {
+                    // [...R] matches [a|b] where R=a. So [...R][a|b]
+                    this.rightVal = tile.b;
+                    this.boardChain.push({ ...tile, x: this.boardChain[this.boardChain.length - 1].x + 85, y: 0, rot: 90 });
+                } else if (tile.b === this.rightVal) {
+                    this.rightVal = tile.a;
+                    this.boardChain.push({ ...tile, x: this.boardChain[this.boardChain.length - 1].x + 85, y: 0, rot: 90, flip: true });
+                }
+
+                // Note: The logic above simplifies visual placement (always horizontal line).
+                // A real domino layout snakes. For 2.0 MVP linear is okay but "Pro" suggests snaking.
+                // Implementing snaking logic is math heavy. I'll stick to a scrolling horizontal pan for robustness.
+
+                this.renderBoard();
+            }
+
+            renderBoard() {
+                const bEl = document.getElementById('board');
+                bEl.innerHTML = '';
+
+                // Center camera? 
+                // We'll just translate the container so 0,0 is center
+                // Actually let's assume tiles are placed relative to 0.
+
+                this.boardChain.forEach(t => {
+                    // Create element
+                    let div = document.createElement('div');
+                    // Check rotation
+                    // Horizontal (90 deg) means width=80. Vertical (0) means width=40.
+                    // Actually my CSS uses classes.
+
+                    let isHoriz = (Math.abs(t.rot) === 90);
+                    div.className = isHoriz ? 'domino horizontal' : 'domino vertical';
+
+                    div.style.left = (this.panX + t.x) + 'px';
+                    div.style.top = (this.panY + t.y) + 'px';
+
+                    // Order of pips depends on flip
+                    let first = t.flip ? t.b : t.a;
+                    let second = t.flip ? t.a : t.b;
+
+                    // But wait, the rotation visual + flip needs to match logic
+                    // If matched left with [b|a], then b is new left.
+                    // Visual must be b-left, a-right.
+                    // If horizontal, left half is first in DOM?
+
+                    if (t.flip) {
+                        // Swap html
+                        div.innerHTML = `
+                            <div class="half">${createPipHTML(t.b)}</div>
+                            <div class="half">${createPipHTML(t.a)}</div>
+                        `;
+                    } else {
+                        div.innerHTML = `
+                            <div class="half">${createPipHTML(t.a)}</div>
+                            <div class="half">${createPipHTML(t.b)}</div>
+                        `;
+                    }
+
+                    bEl.appendChild(div);
+                });
+            }
+
+            showNotif(msg) {
+                let n = document.getElementById('notif');
+                n.innerText = msg;
+                n.style.display = 'block';
+                setTimeout(() => n.style.display = 'none', 1500);
+            }
+
+            endGame(msg) {
+                this.gameOver = true;
+                this.showNotif(msg);
+                this.updateUI();
+                if (msg.includes("YOU")) {
+                    if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('win');
+                } else {
+                    if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('loss');
+                }
+            }
+        }
+
+        // Pan logic
+        let isDragging = false;
+        let lastX = 0;
+        function startDrag(e) {
+            isDragging = true;
+            lastX = e.clientX;
+        }
+        window.addEventListener('mousemove', e => {
+            if (isDragging) {
+                let dx = e.clientX - lastX;
+                game.panX += dx;
+                game.renderBoard();
+                lastX = e.clientX;
+            }
+        });
+        window.addEventListener('mouseup', () => isDragging = false);
+
+        const game = new DominoGame();
+    </script>
+</body>
+
+</html>

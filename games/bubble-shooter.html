@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bubble Surge | GameHub Pro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .game-wrapper {
+            max-width: 700px;
+            margin: 40px auto;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+        }
+
+        .stats-bar {
+            padding: 15px 40px;
+            background: rgba(124, 77, 255, 0.1);
+            display: flex;
+            justify-content: space-around;
+            font-size: 14px;
+            font-weight: 800;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .stat-val {
+            color: var(--accent-secondary);
+            margin-left: 5px;
+        }
+
+        .game-body {
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            justify-content: center;
+            position: relative;
+        }
+
+        canvas {
+            background: linear-gradient(180deg, #0f0c29, #302b63, #24243e);
+            border-radius: 12px;
+            border: 2px solid var(--glass-border);
+            box-shadow: 0 0 40px rgba(124, 77, 255, 0.3);
+        }
+
+        .hud-overlay {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .next-bubble-box {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .next-bubble {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin: 0 auto;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.5);
+        }
+
+        .game-controls {
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        .game-over-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+
+        .game-over-screen h2 {
+            font-size: 48px;
+            color: #ef4444;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px #ef4444;
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <div class="bg-glow-container">
+        <div class="glow-sphere sphere-1"></div>
+        <div class="glow-sphere sphere-2"></div>
+    </div>
+
+    <header class="main-header" style="position: relative; background: transparent; border: none;">
+        <div class="nav-container">
+            <a href="../index.html" class="logo" style="text-decoration: none; color: inherit;">
+                <i data-lucide="arrow-left"></i>
+                <span>BACK TO <span class="accent-text">HUB</span></span>
+            </a>
+            <h2 style="font-weight:800; letter-spacing:-1px">BUBBLE SURGE 2.0</h2>
+        </div>
+    </header>
+
+    <div class="game-wrapper">
+        <div class="stats-bar">
+            <span>SCORE: <span class="stat-val" id="score">0</span></span>
+            <span>LEVEL: <span class="stat-val" id="level">1</span></span>
+        </div>
+
+        <div class="game-body">
+            <canvas id="canvas" width="600" height="700"></canvas>
+
+            <div class="hud-overlay">
+                <div class="next-bubble-box">
+                    <div style="font-size:10px; margin-bottom:5px; color:#aaa">NEXT</div>
+                    <div class="next-bubble" id="nextBubble"></div>
+                </div>
+            </div>
+
+            <div class="game-over-screen" id="gameOver">
+                <h2>SYSTEM OVERLOAD</h2>
+                <p style="color:#aaa; margin-bottom: 30px; font-size:18px">Final Score: <span id="finalScore"
+                        style="color:#fff">0</span></p>
+                <div style="display:flex; gap:15px">
+                    <button class="btn-primary" onclick="resetGame()">REBOOT</button>
+                    <button class="btn-secondary" onclick="goBack()">ABORT</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-controls">
+            <p style="color:#aaa; font-size:12px">AIM with MOUSE &nbsp;|&nbsp; CLICK to SHOOT</p>
+        </div>
+    </div>
+
+    <script src="../js/shared.js"></script>
+    <script>
+        lucide.createIcons();
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+        const R = 20; // Bubble radius
+        // Neon Palettes
+        const colors = ['#f472b6', '#4ade80', '#60a5fa', '#facc15', '#c084fc', '#f87171'];
+
+        let grid = [];
+        let particles = [];
+        let activeBubbles = []; // Visual floating bubbles
+
+        let shooter = { x: W / 2, y: H - 40, angle: -Math.PI / 2 };
+        let currentBubble = null;
+        let nextColor = null;
+
+        let state = {
+            score: 0,
+            level: 1,
+            active: true,
+            rows: 5
+        };
+
+        function resetGame() {
+            state.score = 0;
+            state.level = 1;
+            state.active = true;
+            state.rows = 5;
+            document.getElementById('gameOver').style.display = 'none';
+
+            initGrid();
+            nextColor = getRandomColor();
+            loadShooter();
+            activeBubbles = [];
+            particles = [];
+
+            loop();
+        }
+
+        function getRandomColor() {
+            return colors[Math.floor(Math.random() * colors.length)];
+        }
+
+        function initGrid() {
+            grid = [];
+            for (let r = 0; r < state.rows; r++) {
+                let row = [];
+                for (let c = 0; c < (r % 2 === 0 ? 15 : 14); c++) {
+                    const bx = (c * R * 2) + R + (r % 2 === 0 ? 0 : R);
+                    const by = (r * R * 1.8) + R + 10; // Hex packing roughly
+                    row.push({ x: bx, y: by, color: getRandomColor(), active: true, r: r, c: c });
+                }
+                grid.push(row);
+            }
+        }
+
+        function loadShooter() {
+            currentBubble = {
+                x: shooter.x,
+                y: shooter.y,
+                color: nextColor,
+                vx: 0,
+                vy: 0,
+                moving: false
+            };
+            nextColor = getRandomColor();
+            document.getElementById('nextBubble').style.backgroundColor = nextColor;
+            document.getElementById('nextBubble').style.boxShadow = `0 0 15px ${nextColor}`;
+            document.getElementById('nextBubble').style.borderColor = '#fff';
+        }
+
+        function shoot() {
+            if (currentBubble.moving || !state.active) return;
+
+            const speed = 15;
+            currentBubble.vx = Math.cos(shooter.angle) * speed;
+            currentBubble.vy = Math.sin(shooter.angle) * speed;
+            currentBubble.moving = true;
+
+            if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('click');
+        }
+
+        function update() {
+            if (!state.active) return;
+
+            // Move current bubble
+            if (currentBubble.moving) {
+                currentBubble.x += currentBubble.vx;
+                currentBubble.y += currentBubble.vy;
+
+                // Beams particles trail
+                if (Math.random() > 0.5) {
+                    particles.push({
+                        x: currentBubble.x, y: currentBubble.y,
+                        vx: (Math.random() - 0.5) * 2, vy: (Math.random() - 0.5) * 2,
+                        life: 1.0, color: currentBubble.color
+                    });
+                }
+
+                // Wall bounce
+                if (currentBubble.x < R || currentBubble.x > W - R) {
+                    currentBubble.vx *= -1;
+                    currentBubble.x = Math.max(R, Math.min(W - R, currentBubble.x));
+                }
+
+                // Ceiling collision
+                if (currentBubble.y < R) {
+                    snapBubble();
+                }
+
+                // Grid collision
+                // Simple prox check
+                let snapped = false;
+                for (let r = 0; r < grid.length; r++) {
+                    for (let c = 0; c < grid[r].length; c++) {
+                        let b = grid[r][c];
+                        if (b.active) {
+                            let dist = Math.hypot(currentBubble.x - b.x, currentBubble.y - b.y);
+                            if (dist < R * 2 - 5) {
+                                snapBubble();
+                                snapped = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (snapped) break;
+                }
+            }
+
+            // Update particles
+            particles.forEach((p, i) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.05;
+                if (p.life <= 0) particles.splice(i, 1);
+            });
+
+            // HUD
+            document.getElementById('score').innerText = state.score.toLocaleString();
+            document.getElementById('level').innerText = state.level;
+        }
+
+        function snapBubble() {
+            // Find grid pos
+            // Simplified grid snapping for demo: just add to nearest slot or create new row visual
+            // For this high-fidelity version, let's just push it to grid visually and run BFS match
+
+            // 1. Add to grid array (visual simplifiction: push to closest row list)
+            // Find closest row Y
+            let rowH = R * 1.8;
+            let gridRow = Math.round((currentBubble.y - 10 - R) / rowH);
+            if (gridRow < 0) gridRow = 0;
+
+            // Make sure grid has rows
+            while (grid.length <= gridRow) {
+                grid.push([]);
+            }
+
+            // Calc Col
+            let xOffset = (gridRow % 2 === 0) ? 0 : R;
+            let gridCol = Math.round((currentBubble.x - R - xOffset) / (R * 2));
+
+            // Snap coords
+            let snapX = (gridCol * R * 2) + R + xOffset;
+            let snapY = (gridRow * rowH) + R + 10;
+
+            let newB = { x: snapX, y: snapY, color: currentBubble.color, active: true, r: gridRow, c: gridCol };
+            grid[gridRow][gridCol] = newB; // Can overwrite empty
+
+            // BFS Match
+            let matches = findMatches(newB);
+
+            if (matches.length >= 3) {
+                // POP
+                matches.forEach(m => {
+                    m.active = false;
+                    // Explosion particles
+                    for (let i = 0; i < 5; i++) {
+                        particles.push({
+                            x: m.x, y: m.y,
+                            vx: (Math.random() - 0.5) * 8, vy: (Math.random() - 0.5) * 8,
+                            life: 1.0, color: m.color
+                        });
+                    }
+                });
+                state.score += matches.length * 100;
+                if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('win');
+
+                // Fall check (floating bubbles)
+                // TODO: BFS from top to find floating clusters
+            } else {
+                if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('move');
+
+                // Loose check
+                if (newB.y > H - 100) {
+                    gameOver();
+                }
+            }
+
+            loadShooter();
+        }
+
+        function findMatches(startNode) {
+            // Simple flood fill
+            let matchColor = startNode.color;
+            let queue = [startNode];
+            let visited = new Set();
+            let matches = [];
+
+            visited.add(`${startNode.r},${startNode.c}`);
+
+            while (queue.length > 0) {
+                let curr = queue.pop();
+                matches.push(curr);
+
+                // Neighbors: (complex in hex grid, using simplified distance check for proto)
+                // Iterate all active bubbles and find dist < 2.5 * R
+                for (let r = 0; r < grid.length; r++) {
+                    for (let c in grid[r]) {
+                        let b = grid[r][c];
+                        if (b && b.active && !visited.has(`${r},${c}`)) {
+                            if (b.color === matchColor) {
+                                let d = Math.hypot(b.x - curr.x, b.y - curr.y);
+                                if (d < R * 2.2) {
+                                    visited.add(`${r},${c}`);
+                                    queue.push(b);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return matches;
+        }
+
+        function gameOver() {
+            state.active = false;
+            document.getElementById('gameOver').style.display = 'flex';
+            document.getElementById('finalScore').innerText = state.score;
+            if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('loss');
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, W, H);
+
+            // Grid
+            grid.forEach(row => {
+                row.forEach(b => {
+                    if (b && b.active) {
+                        ctx.beginPath();
+                        ctx.arc(b.x, b.y, R - 1, 0, Math.PI * 2);
+                        ctx.fillStyle = b.color;
+
+                        // Bubble shading
+                        let grad = ctx.createRadialGradient(b.x - 5, b.y - 5, 2, b.x, b.y, R);
+                        grad.addColorStop(0, '#fff');
+                        grad.addColorStop(0.3, b.color);
+                        grad.addColorStop(1, '#000');
+
+                        ctx.fillStyle = b.color;
+                        ctx.shadowBlur = 10;
+                        ctx.shadowColor = b.color;
+                        ctx.fill();
+
+                        // Shine
+                        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                        ctx.beginPath();
+                        ctx.arc(b.x - 7, b.y - 7, 5, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.shadowBlur = 0;
+                    }
+                });
+            });
+
+            // Particles
+            particles.forEach(p => {
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            });
+
+            // Shooter Line
+            if (state.active) {
+                ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(shooter.x, shooter.y);
+                ctx.lineTo(shooter.x + Math.cos(shooter.angle) * 1000, shooter.y + Math.sin(shooter.angle) * 1000);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+
+            // Current Bubble
+            if (currentBubble) {
+                ctx.beginPath();
+                ctx.arc(currentBubble.x, currentBubble.y, R, 0, Math.PI * 2);
+                ctx.fillStyle = currentBubble.color;
+                ctx.shadowBlur = 20;
+                ctx.shadowColor = currentBubble.color;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        // Input
+        canvas.addEventListener('mousemove', e => {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            shooter.angle = Math.atan2(y - shooter.y, x - shooter.x);
+        });
+
+        canvas.addEventListener('click', shoot);
+
+        function goBack() { window.location.href = '../index.html'; }
+
+        resetGame();
+    </script>
+</body>
+
+</html>

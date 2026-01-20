@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insect Catch: Garden Defender</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #8BC34A;
+            --accent: #FF5722;
+            --bg: #1B5E20;
+            --text: #ffffff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .premium-header {
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            position: fixed;
+            top: 0;
+            width: 100%;
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: #fff;
+            font-weight: 800;
+        }
+
+        .game-canvas {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            background: url('https://images.unsplash.com/photo-1542332213-9b5a5a3fad35?q=80&w=1200') center/cover;
+        }
+
+        .game-canvas::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(27, 94, 32, 0.4);
+            pointer-events: none;
+        }
+
+        .insect {
+            position: absolute;
+            font-size: 50px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            z-index: 10;
+            filter: drop-shadow(0 5px 10px rgba(0, 0, 0, 0.3));
+        }
+
+        .insect.dead {
+            transform: scale(1.5) rotate(20deg);
+            opacity: 0;
+            filter: grayscale(1) blur(5px);
+        }
+
+        .splat {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            background: rgba(139, 195, 74, 0.3);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 5;
+            transform: scale(0);
+            animation: splat-pop 0.3s forwards;
+            clip-path: polygon(50% 0%, 80% 10%, 100% 35%, 80% 70%, 50% 100%, 20% 70%, 0% 35%, 20% 10%);
+        }
+
+        @keyframes splat-pop {
+            from {
+                transform: scale(0);
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 0;
+            }
+        }
+
+        .boss {
+            font-size: 100px !important;
+            z-index: 20 !important;
+        }
+
+        .boss-hp {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 6px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 3px;
+        }
+
+        .boss-hp-fill {
+            height: 100%;
+            background: var(--accent);
+            transition: width 0.2s;
+        }
+
+        .web {
+            position: absolute;
+            width: 120px;
+            height: 120px;
+            background: url('https://www.transparenttextures.com/patterns/pinstriped-suit.png'), rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            z-index: 15;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px dashed rgba(255, 255, 255, 0.4);
+        }
+
+        .web::after {
+            content: '🕸️';
+            font-size: 30px;
+        }
+
+        .screen-crack {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 100;
+            background: url('https://www.transparenttextures.com/patterns/crackle.png');
+            opacity: 0;
+            transition: 0.3s;
+        }
+
+        .night-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 40;
+            background: rgba(0, 0, 30, 0.7);
+            opacity: 0;
+            transition: 2s;
+        }
+
+        .night-overlay.active {
+            opacity: 1;
+            background: radial-gradient(circle at var(--x) var(--y), transparent 100px, rgba(0, 0, 30, 0.9) 250px);
+        }
+
+        .hornet {
+            filter: drop-shadow(0 0 15px #FF5722) hue-rotate(280deg) !important;
+            animation: tremor 0.1s infinite;
+        }
+
+        @keyframes tremor {
+            0% {
+                transform: translate(0);
+            }
+
+            50% {
+                transform: translate(2px, 2px);
+            }
+
+            100% {
+                transform: translate(0);
+            }
+        }
+
+        .hud {
+            position: fixed;
+            top: 90px;
+            left: 30px;
+            display: flex;
+            gap: 20px;
+            z-index: 50;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px 25px;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+        }
+
+        .lbl {
+            font-size: 10px;
+            text-transform: uppercase;
+            color: var(--primary);
+            font-weight: 800;
+        }
+
+        .val {
+            font-size: 28px;
+            font-weight: 900;
+        }
+
+        #game-over {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 200;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: #000;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-weight: 900;
+            cursor: pointer;
+            margin-top: 20px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="premium-header">
+        <a href="../index.html" class="back-btn"><i data-lucide="arrow-left"></i><span>BACK</span></a>
+        <div style="font-weight: 900; font-size: 24px; color: var(--primary);">INSECT <span
+                style="color: #fff;">CATCH</span></div>
+        <div style="width: 80px;"></div>
+    </header>
+
+    <div class="hud">
+        <div class="stat-item">
+            <div class="lbl">Caught</div>
+            <div class="val" id="score">0</div>
+        </div>
+        <div class="stat-item">
+            <div class="lbl">Time</div>
+            <div class="val" id="time">30s</div>
+        </div>
+    </div>
+
+    <div class="game-canvas" id="canvas"></div>
+    <div id="night-overlay" class="night-overlay"></div>
+    <div id="screen-crack" class="screen-crack"></div>
+
+    <div id="game-over">
+        <h1 style="font-size: 64px;">GARDEN CLEAR!</h1>
+        <div style="font-size: 32px; margin-top: 10px;">Insects Caught: <span id="final-score"
+                style="color: var(--primary);">0</span></div>
+        <button class="btn" onclick="location.reload()">RE-PATROL</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const scoreEl = document.getElementById('score');
+        const timeEl = document.getElementById('time');
+        const gameOverEl = document.getElementById('game-over');
+
+        let score = 0;
+        let timeLeft = 30;
+        let gameActive = true;
+        let cracks = 0;
+        let isNight = false;
+
+        function speak(text) {
+            const msg = new SpeechSynthesisUtterance(text);
+            msg.rate = 1.2;
+            window.speechSynthesis.speak(msg);
+        }
+
+        const INSECTS = ['🐜', '🐛', '🕷️', '🦗', '🦟', '🪲'];
+        const HORNET = '🐝';
+
+        window.addEventListener('mousemove', (e) => {
+            document.documentElement.style.setProperty('--x', e.clientX + 'px');
+            document.documentElement.style.setProperty('--y', e.clientY + 'px');
+        });
+
+        function spawnInsect() {
+            if (!gameActive) return;
+
+            const insect = document.createElement('div');
+            insect.className = 'insect';
+            insect.innerText = INSECTS[Math.floor(Math.random() * INSECTS.length)];
+
+            const x = Math.random() * (window.innerWidth - 100) + 50;
+            const y = Math.random() * (window.innerHeight - 150) + 100;
+
+            insect.style.left = x + 'px';
+            insect.style.top = y + 'px';
+
+            const isBoss = Math.random() < 0.1 && score > 20;
+            const isHornet = !isBoss && Math.random() < 0.15 && score > 10;
+            const isSpider = insect.innerText === '🕷️' && Math.random() < 0.3;
+
+            if (isSpider) {
+                setTimeout(() => {
+                    if (gameActive && insect.parentElement) {
+                        if (Math.random() < 0.4) spawnWeb(parseFloat(insect.style.left), parseFloat(insect.style.top));
+                    }
+                }, 1000);
+            }
+
+            if (isBoss) {
+                insect.classList.add('boss');
+                insect.innerText = '🐝'; // Queen Bee
+                speak("BOSS DETECTED");
+                let hp = 5;
+                const hpBar = document.createElement('div');
+                hpBar.className = 'boss-hp';
+                const hpFill = document.createElement('div');
+                hpFill.className = 'boss-hp-fill';
+                hpFill.style.width = '100%';
+                hpBar.appendChild(hpFill);
+                insect.appendChild(hpBar);
+
+                insect.onclick = () => {
+                    hp--;
+                    hpFill.style.width = (hp / 5 * 100) + '%';
+                    insect.style.transform = 'scale(1.2)';
+                    setTimeout(() => insect.style.transform = '', 100);
+                    if (hp <= 0) {
+                        score += 15;
+                        scoreEl.innerText = score;
+                        speak("BOSS EXTERMINATED!");
+                        spawnSplat(parseFloat(insect.style.left), parseFloat(insect.style.top));
+                        insect.classList.add('dead');
+                        setTimeout(() => insect.remove(), 200);
+                        checkNightCycle();
+                    }
+                };
+            } else if (isHornet) {
+                insect.classList.add('hornet');
+                insect.innerText = HORNET;
+                let attacked = false;
+
+                const attackTimer = setTimeout(() => {
+                    if (gameActive && insect.parentElement) {
+                        attacked = true;
+                        triggerCrack();
+                        insect.remove();
+                    }
+                }, 2000);
+
+                insect.onclick = () => {
+                    if (attacked) return;
+                    clearTimeout(attackTimer);
+                    score += 5;
+                    scoreEl.innerText = score;
+                    speak("STINGER DEFLECTED!");
+                    spawnSplat(parseFloat(insect.style.left), parseFloat(insect.style.top));
+                    insect.classList.add('dead');
+                    setTimeout(() => insect.remove(), 200);
+                };
+            } else {
+                insect.onclick = () => {
+                    if (!gameActive) return;
+                    score++;
+                    scoreEl.innerText = score;
+                    spawnSplat(parseFloat(insect.style.left), parseFloat(insect.style.top));
+                    insect.classList.add('dead');
+                    if (insect.innerText === '🦟') speak("GOTCHA!");
+                    setTimeout(() => insect.remove(), 200);
+                    checkNightCycle();
+                };
+            }
+
+            canvas.appendChild(insect);
+
+            // Movement
+            let moveX = (Math.random() - 0.5) * 4;
+            let moveY = (Math.random() - 0.5) * 4;
+            let cx = x, cy = y;
+
+            const drift = setInterval(() => {
+                if (!gameActive || !insect.parentElement) { clearInterval(drift); return; }
+                cx += moveX;
+                cy += moveY;
+                insect.style.left = cx + 'px';
+                insect.style.top = cy + 'px';
+
+                if (cx < 0 || cx > window.innerWidth - 50) moveX *= -1;
+                if (cy < 80 || cy > window.innerHeight - 50) moveY *= -1;
+            }, 50);
+
+            setTimeout(() => { if (insect.parentElement) insect.remove(); }, 5000); // More time to see
+            setTimeout(spawnInsect, 600); // Faster consistent spawning
+        }
+
+        function spawnWeb(x, y) {
+            const w = document.createElement('div');
+            w.className = 'web';
+            w.style.left = x + 'px';
+            w.style.top = y + 'px';
+            let hp = 3;
+            w.onclick = (e) => {
+                e.stopPropagation();
+                hp--;
+                w.style.transform = 'scale(0.9)';
+                setTimeout(() => w.style.transform = '', 50);
+                if (hp <= 0) {
+                    w.remove();
+                    speak("WEB CLEARED");
+                }
+            };
+            canvas.appendChild(w);
+        }
+
+        function spawnSplat(x, y) {
+            const s = document.createElement('div');
+            s.className = 'splat';
+            s.style.left = x + 'px';
+            s.style.top = y + 'px';
+            s.style.background = isNight ? 'rgba(0, 230, 118, 0.4)' : 'rgba(139, 195, 74, 0.3)';
+            canvas.appendChild(s);
+            setTimeout(() => s.remove(), 2000);
+        }
+
+        function triggerCrack() {
+            const crack = document.getElementById('screen-crack');
+            crack.style.opacity = '1';
+            speak("STINGER ATTACK! SCREEN DAMAGED!");
+            setTimeout(() => crack.style.opacity = '0', 3000);
+        }
+
+        function checkNightCycle() {
+            if (score > 0 && score % 40 === 0 && !isNight) {
+                isNight = true;
+                const overlay = document.getElementById('night-overlay');
+                overlay.classList.add('active');
+                speak("NIGHTFALL. USE FIREFLY LIGHT.");
+                setTimeout(() => {
+                    isNight = false;
+                    overlay.classList.remove('active');
+                    speak("DAWN ARRIVES.");
+                }, 15000);
+            }
+        }
+
+        function startTimer() {
+            speak("DEFEND THE GARDEN!");
+            const timer = setInterval(() => {
+                timeLeft--;
+                timeEl.innerText = timeLeft + 's';
+                if (timeLeft <= 5 && timeLeft > 0) speak(timeLeft.toString());
+                if (timeLeft <= 0) {
+                    clearInterval(timer);
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function endGame() {
+            gameActive = false;
+            speak("GARDEN SECURED. TOTAL CAUGHT " + score);
+            gameOverEl.style.display = 'flex';
+            document.getElementById('final-score').innerText = score;
+        }
+
+        spawnInsect();
+        startTimer();
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

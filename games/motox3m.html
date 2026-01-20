@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moto Cyber X3M | GameHub Pro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .game-wrapper {
+            max-width: 900px;
+            margin: 40px auto;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+        }
+
+        .stats-bar {
+            padding: 15px 40px;
+            background: rgba(124, 77, 255, 0.1);
+            display: flex;
+            justify-content: space-around;
+            font-size: 14px;
+            font-weight: 800;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .stat-val {
+            color: var(--accent-secondary);
+            margin-left: 5px;
+        }
+
+        .game-body {
+            padding: 40px;
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .viewport {
+            position: relative;
+            width: 800px;
+            height: 400px;
+            background: linear-gradient(180deg, #0a0a1f 0%, #1a1a3a 100%);
+            border-radius: 16px;
+            border: 2px solid var(--glass-border);
+            overflow: hidden;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+        }
+
+        .grid-bg {
+            position: absolute;
+            width: 200%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(124, 77, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(124, 77, 255, 0.1) 1px, transparent 1px);
+            background-size: 40px 40px;
+            transform: perspective(500px) rotateX(60deg);
+            transform-origin: bottom;
+            bottom: -50px;
+            animation: scroll-bg 2s linear infinite;
+        }
+
+        @keyframes scroll-bg {
+            0% {
+                transform: perspective(500px) rotateX(60deg) translateY(0);
+            }
+
+            100% {
+                transform: perspective(500px) rotateX(60deg) translateY(40px);
+            }
+        }
+
+        .bike {
+            position: absolute;
+            width: 60px;
+            height: 30px;
+            z-index: 10;
+            transition: transform 0.1s;
+        }
+
+        .bike-body {
+            position: absolute;
+            width: 40px;
+            height: 15px;
+            background: var(--accent-primary);
+            border-radius: 10px 20px 5px 5px;
+            box-shadow: 0 0 15px var(--accent-primary);
+            top: 5px;
+            left: 10px;
+        }
+
+        .wheel {
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            background: #000;
+            border: 2px solid #00e5ff;
+            border-radius: 50%;
+            box-shadow: 0 0 10px #00e5ff;
+        }
+
+        .wheel-back {
+            bottom: 0;
+            left: 0;
+        }
+
+        .wheel-front {
+            bottom: 0;
+            right: 0;
+        }
+
+        .obstacle {
+            position: absolute;
+            bottom: 40px;
+            width: 40px;
+            height: 40px;
+            background: #ff1744;
+            border: 2px solid #fff;
+            box-shadow: 0 0 20px #ff1744;
+            border-radius: 8px;
+        }
+
+        .ramp {
+            position: absolute;
+            bottom: 40px;
+            width: 80px;
+            height: 20px;
+            background: #00e5ff;
+            box-shadow: 0 0 20px #00e5ff;
+            transform: skew(-30deg);
+        }
+
+        .particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--accent-secondary);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .game-controls {
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <div class="bg-glow-container">
+        <div class="glow-sphere sphere-1"></div>
+        <div class="glow-sphere sphere-2"></div>
+    </div>
+
+    <header class="main-header" style="position: relative; background: transparent; border: none;">
+        <div class="nav-container">
+            <a href="../index.html" class="logo" style="text-decoration: none; color: inherit;">
+                <i data-lucide="arrow-left"></i>
+                <span>BACK TO <span class="accent-text">HUB</span></span>
+            </a>
+            <h2 style="font-weight:800; letter-spacing:-1px">MOTO CYBER X3M</h2>
+        </div>
+    </header>
+
+    <div class="game-wrapper">
+        <div class="stats-bar">
+            <span>SCORE: <span class="stat-val" id="score">0</span></span>
+            <span>DISTANCE: <span class="stat-val" id="distance">0m</span></span>
+            <span>TOP SPEED: <span class="stat-val" id="speed">0%</span></span>
+        </div>
+
+        <div class="game-body">
+            <div class="viewport" id="viewport">
+                <div class="grid-bg"></div>
+                <div id="game-objects"></div>
+                <div class="bike" id="bike">
+                    <div class="bike-body"></div>
+                    <div class="wheel wheel-back"></div>
+                    <div class="wheel wheel-front"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="game-controls">
+            <button class="btn-primary" onclick="startGame()">START ENGINE</button>
+            <button class="btn-secondary" onclick="resetGame()">RESET</button>
+            <button class="btn-secondary" onclick="goBack()">EXIT HUB</button>
+        </div>
+    </div>
+
+    <script src="../js/shared.js"></script>
+    <script>
+        lucide.createIcons();
+
+        const viewport = document.getElementById('viewport');
+        const objectsLayer = document.getElementById('game-objects');
+        const bikeEl = document.getElementById('bike');
+
+        let gameState = 'ready';
+        let score = 0, distance = 0, speedMult = 1.0;
+        let bike = { x: 100, y: 330, vy: 0, rot: 0, onGround: true };
+        let obstacles = [], ramps = [], particles = [];
+        let keys = {};
+
+        function startGame() {
+            if (gameState === 'playing') return;
+            gameState = 'playing';
+            if (typeof GameHubAudio !== 'undefined') GameHubAudio.playMusic();
+            loop();
+        }
+
+        function resetGame() {
+            gameState = 'ready';
+            score = 0; distance = 0; speedMult = 1.0;
+            bike = { x: 100, y: 330, vy: 0, rot: 0, onGround: true };
+            obstacles.forEach(o => o.el.remove());
+            ramps.forEach(r => r.el.remove());
+            particles.forEach(p => p.el.remove());
+            obstacles = []; ramps = []; particles = [];
+            updateStats();
+            updateBike();
+            if (typeof GameHubAudio !== 'undefined') GameHubAudio.stopMusic();
+        }
+
+        function createObstacle() {
+            const el = document.createElement('div');
+            el.className = 'obstacle';
+            objectsLayer.appendChild(el);
+            obstacles.push({ el, x: 900 });
+        }
+
+        function createRamp() {
+            const el = document.createElement('div');
+            el.className = 'ramp';
+            objectsLayer.appendChild(el);
+            ramps.push({ el, x: 1000 });
+        }
+
+        function update() {
+            if (gameState !== 'playing') return;
+
+            // Input
+            if (keys['ArrowRight']) speedMult = Math.min(speedMult + 0.04, 4.0);
+            else if (keys['ArrowLeft']) speedMult = Math.max(speedMult - 0.08, 0.5);
+            else speedMult = Math.max(speedMult - 0.02, 1.2);
+
+            if (keys['ArrowUp']) bike.rot = Math.max(bike.rot - 8, -35);
+            else if (keys['ArrowDown']) bike.rot = Math.min(bike.rot + 8, 35);
+            else bike.rot *= 0.85;
+
+            if (keys[' '] && bike.onGround) {
+                bike.vy = -14;
+                bike.onGround = false;
+                if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('move');
+            }
+
+            // Physics
+            bike.vy += 0.6; // Gravity
+            bike.y += bike.vy;
+            if (bike.y >= 330) {
+                bike.y = 330;
+                bike.vy = 0;
+                bike.onGround = true;
+            }
+
+            distance += Math.floor(speedMult * 2);
+            score += Math.floor(speedMult / 2);
+
+            // Obstacles
+            if (Math.random() < 0.02) createObstacle();
+            if (Math.random() < 0.01) createRamp();
+
+            obstacles.forEach((o, i) => {
+                o.x -= 5 * speedMult;
+                o.el.style.left = o.x + 'px';
+                if (o.x < -100) { o.el.remove(); obstacles.splice(i, 1); }
+
+                // Collision
+                if (Math.abs(o.x - bike.x) < 40 && Math.abs((330 - 40) - bike.y) < 30) {
+                    endGame();
+                }
+            });
+
+            ramps.forEach((r, i) => {
+                r.x -= 5 * speedMult;
+                r.el.style.left = r.x + 'px';
+                if (r.x < -100) { r.el.remove(); ramps.splice(i, 1); }
+
+                // Ramp launch
+                if (Math.abs(r.x - bike.x) < 50 && bike.onGround) {
+                    bike.vy = -15;
+                    bike.onGround = false;
+                    score += 50;
+                    if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('win');
+                }
+            });
+
+            // Particles
+            if (bike.onGround && speedMult > 2) spawnParticle();
+            particles.forEach((p, i) => {
+                p.x -= 8;
+                p.y += (Math.random() - 0.5) * 5;
+                p.life--;
+                p.el.style.left = p.x + 'px';
+                p.el.style.top = p.y + 'px';
+                p.el.style.opacity = p.life / 20;
+                if (p.life <= 0) { p.el.remove(); particles.splice(i, 1); }
+            });
+
+            updateBike();
+            updateStats();
+        }
+
+        function spawnParticle() {
+            const el = document.createElement('div');
+            el.className = 'particle';
+            viewport.appendChild(el);
+            particles.push({ el, x: bike.x, y: bike.y + 25, life: 20 });
+        }
+
+        function updateBike() {
+            bikeEl.style.top = bike.y + 'px';
+            bikeEl.style.left = bike.x + 'px';
+            bikeEl.style.transform = `rotate(${bike.rot}deg)`;
+        }
+
+        function updateStats() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('distance').textContent = distance + 'm';
+            document.getElementById('speed').textContent = Math.floor(speedMult * 33) + '%';
+        }
+
+        function endGame() {
+            gameState = 'over';
+            if (typeof GameHubAudio !== 'undefined') {
+                GameHubAudio.play('loss');
+                GameHubAudio.stopMusic();
+            }
+            GameHubStats.reportScore('motox3m', score);
+            alert('SYSTEM FAILURE - CRASH DETECTED. SCORE: ' + score);
+        }
+
+        function goBack() {
+            if (typeof GameHubAudio !== 'undefined') GameHubAudio.stopMusic();
+            window.location.href = '../index.html';
+        }
+
+        function loop() {
+            if (gameState === 'playing') {
+                update();
+                requestAnimationFrame(loop);
+            }
+        }
+
+        window.onkeydown = (e) => keys[e.key] = true;
+        window.onkeyup = (e) => keys[e.key] = false;
+
+        updateStats();
+    </script>
+</body>
+
+</html>

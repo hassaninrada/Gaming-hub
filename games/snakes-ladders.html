@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snakes & Ladders | GameHub Pro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .game-wrapper {
+            max-width: 800px;
+            margin: 40px auto;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+        }
+
+        .stats-bar {
+            padding: 20px 40px;
+            background: rgba(124, 77, 255, 0.1);
+            display: flex;
+            justify-content: space-around;
+            font-size: 16px;
+            font-weight: 800;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .stat-val {
+            color: var(--accent-secondary);
+            margin-left: 5px;
+        }
+
+        .game-body {
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .board-container {
+            position: relative;
+            width: 600px;
+            height: 600px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 4px solid var(--glass-border);
+            border-radius: 12px;
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            grid-template-rows: repeat(10, 1fr);
+        }
+
+        .cell {
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-muted);
+            position: relative;
+        }
+
+        .cell:nth-child(odd) {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .piece {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            position: absolute;
+            z-index: 10;
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            border: 2px solid #fff;
+        }
+
+        .piece.p1 {
+            background: var(--accent-primary);
+            box-shadow: 0 0 15px var(--accent-primary);
+        }
+
+        .piece.p2 {
+            background: var(--accent-secondary);
+            box-shadow: 0 0 15px var(--accent-secondary);
+        }
+
+        .svg-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .dice-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .dice {
+            width: 80px;
+            height: 80px;
+            background: var(--card-bg);
+            border: 2px solid var(--accent-secondary);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            font-weight: 900;
+            color: #fff;
+            box-shadow: 0 0 30px rgba(0, 229, 255, 0.2);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .dice:active {
+            transform: scale(0.9);
+        }
+
+        .dice.rolling {
+            animation: roll 0.5s infinite;
+        }
+
+        @keyframes roll {
+            0% {
+                transform: rotate(0deg) scale(1);
+            }
+
+            50% {
+                transform: rotate(180deg) scale(1.1);
+            }
+
+            100% {
+                transform: rotate(360deg) scale(1);
+            }
+        }
+
+        .ladder {
+            stroke: #22c55e;
+            stroke-width: 8;
+            stroke-linecap: round;
+            opacity: 0.6;
+        }
+
+        .snake {
+            stroke: #ef4444;
+            stroke-width: 8;
+            stroke-linecap: round;
+            opacity: 0.6;
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <div class="bg-glow-container">
+        <div class="glow-sphere sphere-1"></div>
+        <div class="glow-sphere sphere-2"></div>
+    </div>
+
+    <header class="main-header" style="position: relative; background: transparent; border: none;">
+        <div class="nav-container">
+            <a href="index.html" class="logo" style="text-decoration: none; color: inherit;">
+                <i data-lucide="arrow-left"></i>
+                <span>BACK TO <span class="accent-text">HUB</span></span>
+            </a>
+            <h2 style="font-weight:800; letter-spacing:-1px">NEON LADDERS</h2>
+        </div>
+    </header>
+
+    <div class="game-wrapper">
+        <div class="stats-bar">
+            <span>TURN: <span class="stat-val" id="turn">PLAYER 1</span></span>
+            <span>STATUS: <span class="stat-val" id="status">WAITING</span></span>
+        </div>
+
+        <div class="game-body">
+            <div class="board-container" id="board">
+                <svg class="svg-overlay" id="svg-overlay"></svg>
+                <!-- Cells generated by JS -->
+            </div>
+
+            <div class="dice-area">
+                <div class="dice" id="dice" onclick="rollDice()">1</div>
+                <p class="hint-text">Click the core energy to advance.</p>
+            </div>
+        </div>
+
+        <div class="game-controls">
+            <button class="btn-primary" onclick="initGame()">RESET SYSTEM</button>
+            <button class="btn-secondary" onclick="window.location.href='index.html'">EXIT SYSTEM</button>
+        </div>
+    </div>
+
+    <script src="../js/shared.js"></script>
+    <script>
+        lucide.createIcons();
+
+        const boardEl = document.getElementById('board');
+        const svgEl = document.getElementById('svg-overlay');
+        const diceEl = document.getElementById('dice');
+        const turnEl = document.getElementById('turn');
+        const statusEl = document.getElementById('status');
+
+        let players = [
+            { pos: 0, el: null, color: 'p1' },
+            { pos: 0, el: null, color: 'p2' }
+        ];
+        let turn = 0;
+        let rolling = false;
+
+        const snakes = { 16: 6, 47: 26, 49: 11, 56: 53, 62: 19, 64: 60, 87: 24, 93: 73, 95: 75, 98: 78 };
+        const ladders = { 1: 38, 4: 14, 9: 31, 21: 42, 28: 84, 36: 44, 51: 67, 71: 91, 80: 100 };
+
+        function initGame() {
+            boardEl.innerHTML = '<svg class="svg-overlay" id="svg-overlay"></svg>';
+            const newSvg = document.getElementById('svg-overlay');
+
+            // Create 100 cells
+            for (let i = 100; i >= 1; i--) {
+                const row = Math.floor((i - 1) / 10);
+                const col = (i - 1) % 10;
+                let actualCol = (row % 2 === 0) ? col : (9 - col);
+
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.id = `cell-${i}`;
+                cell.style.gridRow = 10 - row;
+                cell.style.gridColumn = actualCol + 1;
+                cell.textContent = i;
+                boardEl.appendChild(cell);
+            }
+
+            // Draw snakes and ladders
+            drawConnections();
+
+            // Create player pieces
+            players[0].pos = 1;
+            players[1].pos = 1;
+
+            if (!players[0].el) {
+                players[0].el = document.createElement('div');
+                players[0].el.className = 'piece p1';
+            }
+            if (!players[1].el) {
+                players[1].el = document.createElement('div');
+                players[1].el.className = 'piece p2';
+            }
+
+            updatePositions();
+            turn = 0;
+            updateTurnUI();
+            statusEl.innerText = 'READY';
+        }
+
+        function drawConnections() {
+            const svg = document.getElementById('svg-overlay');
+            Object.entries(ladders).forEach(([start, end]) => drawLine(start, end, 'ladder'));
+            Object.entries(snakes).forEach(([start, end]) => drawLine(start, end, 'snake'));
+        }
+
+        function drawLine(s, e, type) {
+            const startCell = document.getElementById(`cell-${s}`);
+            const endCell = document.getElementById(`cell-${e}`);
+            if (!startCell || !endCell) return;
+
+            const boardRect = boardEl.getBoundingClientRect();
+            const startRect = startCell.getBoundingClientRect();
+            const endRect = endCell.getBoundingClientRect();
+
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", startRect.left - boardRect.left + 30);
+            line.setAttribute("y1", startRect.top - boardRect.top + 30);
+            line.setAttribute("x2", endRect.left - boardRect.left + 30);
+            line.setAttribute("y2", endRect.top - boardRect.top + 30);
+            line.setAttribute("class", type);
+            document.getElementById('svg-overlay').appendChild(line);
+        }
+
+        function updatePositions() {
+            players.forEach((p, i) => {
+                const cell = document.getElementById(`cell-${p.pos}`);
+                if (cell) {
+                    cell.appendChild(p.el);
+                    // Offset players if on same cell
+                    if (players[0].pos === players[1].pos) {
+                        players[0].el.style.transform = 'translate(-10px, -10px)';
+                        players[1].el.style.transform = 'translate(10px, 10px)';
+                    } else {
+                        players[i].el.style.transform = '';
+                    }
+                }
+            });
+        }
+
+        async function rollDice() {
+            if (rolling) return;
+            rolling = true;
+            diceEl.classList.add('rolling');
+            if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('move');
+
+            setTimeout(async () => {
+                const val = Math.floor(Math.random() * 6) + 1;
+                diceEl.innerText = val;
+                diceEl.classList.remove('rolling');
+
+                await movePlayer(val);
+
+                rolling = false;
+            }, 600);
+        }
+
+        async function movePlayer(val) {
+            const p = players[turn];
+            let targetPos = p.pos + val;
+
+            if (targetPos > 100) {
+                nextTurn();
+                return;
+            }
+
+            // Step by step move
+            for (let i = 1; i <= val; i++) {
+                p.pos++;
+                updatePositions();
+                if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('click');
+                await new Promise(r => setTimeout(r, 200));
+            }
+
+            // Check snakes/ladders
+            if (ladders[p.pos]) {
+                statusEl.innerText = 'LADDER DETECTED!';
+                if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('win');
+                p.pos = ladders[p.pos];
+                await new Promise(r => setTimeout(r, 500));
+                updatePositions();
+            } else if (snakes[p.pos]) {
+                statusEl.innerText = 'SNAKE DETECTED!';
+                if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('loss');
+                p.pos = snakes[p.pos];
+                await new Promise(r => setTimeout(r, 500));
+                updatePositions();
+            }
+
+            if (p.pos === 100) {
+                alert(`PLAYER ${turn + 1} ASCENDED!`);
+                initGame();
+                return;
+            }
+
+            nextTurn();
+        }
+
+        function nextTurn() {
+            turn = 1 - turn;
+            updateTurnUI();
+            if (turn === 1) { // Simple AI
+                setTimeout(() => rollDice(), 800);
+            }
+        }
+
+        function updateTurnUI() {
+            turnEl.innerText = `PLAYER ${turn + 1}`;
+            turnEl.style.color = turn === 0 ? 'var(--accent-primary)' : 'var(--accent-secondary)';
+            statusEl.innerText = turn === 0 ? 'YOUR TURN' : 'AI SYNCHRONIZING...';
+        }
+
+        window.onload = () => {
+            initGame();
+        };
+
+        function goBack() {
+            window.location.href = '../index.html';
+        }
+    </script>
+</body>
+
+</html>

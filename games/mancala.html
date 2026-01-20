@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mancala Elite | GameHub Pro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .game-wrapper {
+            max-width: 1000px;
+            margin: 40px auto;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+        }
+
+        .stats-bar {
+            padding: 20px 40px;
+            background: rgba(124, 77, 255, 0.1);
+            display: flex;
+            justify-content: space-around;
+            font-size: 16px;
+            font-weight: 800;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .stat-val {
+            color: var(--accent-secondary);
+            margin-left: 5px;
+        }
+
+        .game-body {
+            padding: 60px 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 40px;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .mancala-board {
+            display: flex;
+            gap: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 30px;
+            border-radius: 100px;
+            border: 2px solid var(--glass-border);
+            box-shadow: 0 0 50px rgba(124, 77, 255, 0.1);
+        }
+
+        .store {
+            width: 80px;
+            height: 250px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid var(--glass-border);
+            border-radius: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            position: relative;
+        }
+
+        .pits-container {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .pits-row {
+            display: flex;
+            gap: 20px;
+        }
+
+        .pit {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            border-radius: 50%;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+            position: relative;
+        }
+
+        .pit:hover {
+            background: rgba(124, 77, 255, 0.2);
+            transform: scale(1.05);
+            border-color: var(--accent-primary);
+        }
+
+        .pit.disabled {
+            cursor: default;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        .seed {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #fff;
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.8);
+        }
+
+        .p1-seed {
+            background: var(--accent-primary);
+            box-shadow: 0 0 8px var(--accent-primary);
+        }
+
+        .p2-seed {
+            background: var(--accent-secondary);
+            box-shadow: 0 0 8px var(--accent-secondary);
+        }
+
+        .seed-count {
+            position: absolute;
+            bottom: -25px;
+            width: 100%;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 800;
+            color: var(--text-muted);
+        }
+
+        .store .seed-count {
+            bottom: -35px;
+            color: #fff;
+            font-size: 18px;
+        }
+
+        .turn-indicator {
+            padding: 10px 30px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            font-weight: 800;
+            letter-spacing: 2px;
+            transition: all 0.5s;
+        }
+
+        .turn-indicator.p1 {
+            color: var(--accent-primary);
+            border: 2px solid var(--accent-primary);
+            box-shadow: 0 0 20px rgba(124, 77, 255, 0.3);
+        }
+
+        .turn-indicator.p2 {
+            color: var(--accent-secondary);
+            border: 2px solid var(--accent-secondary);
+            box-shadow: 0 0 20px rgba(0, 229, 255, 0.3);
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <div class="bg-glow-container">
+        <div class="glow-sphere sphere-1"></div>
+        <div class="glow-sphere sphere-2"></div>
+    </div>
+
+    <header class="main-header" style="position: relative; background: transparent; border: none;">
+        <div class="nav-container">
+            <a href="index.html" class="logo" style="text-decoration: none; color: inherit;">
+                <i data-lucide="arrow-left"></i>
+                <span>BACK TO <span class="accent-text">HUB</span></span>
+            </a>
+            <h2 style="font-weight:800; letter-spacing:-1px">MANCALA ELITE</h2>
+        </div>
+    </header>
+
+    <div class="game-wrapper">
+        <div class="stats-bar">
+            <span>PLAYER 1: <span class="stat-val" id="p1-score">0</span></span>
+            <div class="turn-indicator p1" id="turn-ui">YOUR TURN</div>
+            <span>PLAYER 2: <span class="stat-val" id="p2-score">0</span></span>
+        </div>
+
+        <div class="game-body">
+            <div class="mancala-board">
+                <!-- Store 2 (AI/P2) -->
+                <div class="store" id="store-13">
+                    <div class="seed-count">0</div>
+                </div>
+
+                <div class="pits-container">
+                    <!-- Row 2 (AI/P2) -->
+                    <div class="pits-row">
+                        <div class="pit disabled" id="pit-12">
+                            <div class="seed-count">4</div>
+                        </div>
+                        <div class="pit disabled" id="pit-11">
+                            <div class="seed-count">4</div>
+                        </div>
+                        <div class="pit disabled" id="pit-10">
+                            <div class="seed-count">4</div>
+                        </div>
+                        <div class="pit disabled" id="pit-9">
+                            <div class="seed-count">4</div>
+                        </div>
+                        <div class="pit disabled" id="pit-8">
+                            <div class="seed-count">4</div>
+                        </div>
+                        <div class="pit disabled" id="pit-7">
+                            <div class="seed-count">4</div>
+                        </div>
+                    </div>
+                    <!-- Row 1 (Player) -->
+                    <div class="pits-row">
+                        <div class="pit" id="pit-0" onclick="makeMove(0)">
+                            <div class="seed-count">4</div>
+                        </div>
+                        <div class="pit" id="pit-1" onclick="makeMove(1)">
+                            <div class="seed-count">4</div>
+                        </div>
+                        <div class="pit" id="pit-2" onclick="makeMove(2)">
+                            <div class="seed-count">4</div>
+                        </div>
+                        <div class="pit" id="pit-3" onclick="makeMove(3)">
+                            <div class="seed-count">4</div>
+                        </div>
+                        <div class="pit" id="pit-4" onclick="makeMove(4)">
+                            <div class="seed-count">4</div>
+                        </div>
+                        <div class="pit" id="pit-5" onclick="makeMove(5)">
+                            <div class="seed-count">4</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Store 1 (Player) -->
+                <div class="store" id="store-6">
+                    <div class="seed-count">0</div>
+                </div>
+            </div>
+            <p class="hint-text">Relocate the energy seeds. Capture the opponent's core storage.</p>
+        </div>
+
+        <div class="game-controls">
+            <button class="btn-primary" onclick="initGame()">RESET PROTOCOL</button>
+            <button class="btn-secondary" onclick="window.location.href='index.html'">EXIT SYSTEM</button>
+        </div>
+    </div>
+
+    <script src="../js/shared.js"></script>
+    <script>
+        lucide.createIcons();
+
+        let board = Array(14).fill(4);
+        board[6] = 0; // Player store
+        board[13] = 0; // AI store
+        let turn = 0; // 0: Player, 1: AI
+        let lock = false;
+
+        function initGame() {
+            board = Array(14).fill(4);
+            board[6] = 0;
+            board[13] = 0;
+            turn = 0;
+            lock = false;
+            render();
+            updateTurnUI();
+        }
+
+        function render() {
+            board.forEach((val, i) => {
+                const el = document.getElementById(i === 6 || i === 13 ? `store-${i}` : `pit-${i}`);
+                if (el) {
+                    const countEl = el.querySelector('.seed-count');
+                    countEl.innerText = val;
+
+                    // Visual seeds
+                    const oldSeeds = el.querySelectorAll('.seed');
+                    oldSeeds.forEach(s => s.remove());
+                    for (let j = 0; j < Math.min(val, 12); j++) {
+                        const s = document.createElement('div');
+                        s.className = `seed ${i <= 6 ? 'p1-seed' : 'p2-seed'}`;
+                        s.style.transform = `translate(${(Math.random() - 0.5) * 20}px, ${(Math.random() - 0.5) * 20}px)`;
+                        el.appendChild(s);
+                    }
+                }
+            });
+            document.getElementById('p1-score').innerText = board[6];
+            document.getElementById('p2-score').innerText = board[13];
+        }
+
+        async function makeMove(idx) {
+            if (lock || turn !== 0 || board[idx] === 0) return;
+            lock = true;
+            await executeMove(idx);
+            lock = false;
+        }
+
+        async function executeMove(idx) {
+            let seeds = board[idx];
+            board[idx] = 0;
+            let current = idx;
+
+            if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('click');
+
+            while (seeds > 0) {
+                current = (current + 1) % 14;
+
+                // Skip opponent store
+                if (turn === 0 && current === 13) current = 0;
+                if (turn === 1 && current === 6) current = 7;
+
+                board[current]++;
+                seeds--;
+                render();
+                if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('move');
+                await new Promise(r => setTimeout(r, 200));
+            }
+
+            // Capture logic
+            if (board[current] === 1 && current !== 6 && current !== 13) {
+                const isPlayerSide = current < 6;
+                const isAISide = current > 6 && current < 13;
+
+                if ((turn === 0 && isPlayerSide) || (turn === 1 && isAISide)) {
+                    const opposite = 12 - current;
+                    if (board[opposite] > 0) {
+                        const store = turn === 0 ? 6 : 13;
+                        board[store] += board[current] + board[opposite];
+                        board[current] = 0;
+                        board[opposite] = 0;
+                        if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('win');
+                        render();
+                    }
+                }
+            }
+
+            // Game over check
+            if (checkGameOver()) return;
+
+            // Extra turn logic
+            if ((turn === 0 && current === 6) || (turn === 1 && current === 13)) {
+                updateTurnUI('EXTRA TURN');
+            } else {
+                turn = 1 - turn;
+                updateTurnUI();
+                if (turn === 1) setTimeout(aiMove, 1000);
+            }
+        }
+
+        function checkGameOver() {
+            const p1Pits = board.slice(0, 6).every(v => v === 0);
+            const p2Pits = board.slice(7, 13).every(v => v === 0);
+
+            if (p1Pits || p2Pits) {
+                // Collect remaining
+                for (let i = 0; i < 6; i++) { board[6] += board[i]; board[i] = 0; }
+                for (let i = 7; i < 13; i++) { board[13] += board[i]; board[i] = 0; }
+                render();
+
+                const winner = board[6] > board[13] ? "PLAYER 1" : "PLAYER 2";
+                alert(`SIMULATION COMPLETE. WINNER: ${winner}`);
+                GameHubStats.reportScore('mancala', board[6]);
+                initGame();
+                return true;
+            }
+            return false;
+        }
+
+        async function aiMove() {
+            if (turn === 0) return;
+            // Basic AI: Pick pit with most seeds or that gives extra turn
+            let bestPit = -1;
+            const aiPits = [7, 8, 9, 10, 11, 12];
+
+            // Priority 1: Extra turn
+            for (let p of aiPits) {
+                if (board[p] > 0 && (p + board[p]) % 14 === 13) {
+                    bestPit = p; break;
+                }
+            }
+
+            // Priority 2: Most seeds
+            if (bestPit === -1) {
+                bestPit = aiPits.reduce((prev, curr) => board[curr] > board[prev] ? curr : prev);
+            }
+
+            if (board[bestPit] > 0) {
+                await executeMove(bestPit);
+            } else {
+                // Fallback to first non-empty
+                bestPit = aiPits.find(p => board[p] > 0);
+                if (bestPit !== undefined) await executeMove(bestPit);
+            }
+        }
+
+        function updateTurnUI(extra = '') {
+            const ui = document.getElementById('turn-ui');
+            ui.className = `turn-indicator p${turn + 1}`;
+            ui.innerText = extra || (turn === 0 ? 'YOUR TURN' : 'AI TURN');
+
+            const pits = document.querySelectorAll('.pit');
+            pits.forEach((p, i) => {
+                if (turn === 0 && i < 6) p.classList.remove('disabled');
+                else p.classList.add('disabled');
+            });
+        }
+
+        window.onload = initGame;
+    </script>
+</body>
+
+</html>

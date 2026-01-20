@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whack-A-Mole: Neon Garden</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #FF4081;
+            --accent: #00E5FF;
+            --bg: #0D0D1A;
+            --hole: #1A1A2E;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .premium-header {
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: #fff;
+            font-weight: 800;
+        }
+
+        .game-area {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: radial-gradient(circle at 50% 50%, #1A1A2E 0%, #0D0D1A 100%);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 160px);
+            grid-template-rows: repeat(3, 160px);
+            gap: 30px;
+        }
+
+        .hole {
+            width: 160px;
+            height: 160px;
+            background: var(--hole);
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+            border: 4px solid rgba(255, 255, 255, 0.05);
+            box-shadow: inset 0 10px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .mole {
+            width: 120px;
+            height: 120px;
+            background: #8D6E63;
+            border-radius: 50% 50% 20% 20%;
+            position: absolute;
+            bottom: -120px;
+            left: 20px;
+            transition: bottom 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border: 4px solid #5D4037;
+        }
+
+        .mole::before {
+            content: '👀';
+            font-size: 40px;
+        }
+
+        .mole.up {
+            bottom: 20px;
+        }
+
+        .mole.hit {
+            background: var(--primary);
+            transform: scale(0.8);
+        }
+
+        .mole.golden {
+            background: #FFD600;
+            border-color: #FBC02D;
+            box-shadow: 0 0 20px #FFD600;
+        }
+
+        .mole.golden::before {
+            content: '👑';
+        }
+
+        .mole.bomb::before {
+            content: '💣';
+        }
+
+        .mole.shielded {
+            border: 8px solid var(--accent) !important;
+            box-shadow: 0 0 30px var(--accent);
+        }
+
+        .mole.shielded::after {
+            content: '🛡️';
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            font-size: 30px;
+        }
+
+        .mole.phantom {
+            animation: phantom-phase 1s infinite alternate;
+        }
+
+        @keyframes phantom-phase {
+            0% {
+                opacity: 0.1;
+                filter: blur(5px) grayscale(1);
+            }
+
+            100% {
+                opacity: 0.8;
+                filter: blur(0);
+            }
+        }
+
+        .screen-shake {
+            animation: mole-shake 0.3s cubic-bezier(.36, .07, .19, .97) both;
+        }
+
+        @keyframes mole-shake {
+
+            10%,
+            90% {
+                transform: translate3d(-2px, 0, 0);
+            }
+
+            20%,
+            80% {
+                transform: translate3d(4px, 0, 0);
+            }
+
+            30%,
+            50%,
+            70% {
+                transform: translate3d(-8px, 0, 0);
+            }
+
+            40%,
+            60% {
+                transform: translate3d(8px, 0, 0);
+            }
+        }
+
+        .frenzy-msg {
+            position: fixed;
+            top: 100px;
+            right: 40px;
+            font-size: 32px;
+            font-weight: 900;
+            color: #CCFF00;
+            opacity: 0;
+            transition: 0.3s;
+        }
+
+        .frenzy-msg.show {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .stats {
+            position: fixed;
+            top: 100px;
+            left: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 20px;
+        }
+
+        .stat-item {
+            margin-bottom: 15px;
+        }
+
+        .val {
+            font-size: 36px;
+            font-weight: 900;
+        }
+
+        .lbl {
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: var(--accent);
+        }
+
+        #game-over {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 200;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-weight: 900;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="premium-header">
+        <a href="../index.html" class="back-btn"><i data-lucide="arrow-left"></i><span>BACK</span></a>
+        <div style="font-weight: 900; font-size: 24px;">WHACK <span style="color: var(--primary);">A MOLE</span></div>
+        <div style="width: 80px;"></div>
+    </header>
+
+    <div class="stats">
+        <div class="stat-item">
+            <div class="lbl">Score</div>
+            <div class="val" id="score">0</div>
+        </div>
+        <div class="stat-item">
+            <div class="lbl">MODE</div>
+            <div class="val" id="time">ENDLESS</div>
+        </div>
+        <div class="stat-item">
+            <div class="lbl">Combo</div>
+            <div class="val" id="combo">0</div>
+        </div>
+    </div>
+    <div class="frenzy-msg" id="frenzy">FRENZY!</div>
+
+    <div class="game-area">
+        <div class="grid" id="grid">
+            <!-- 9 Holes -->
+            <div class="hole">
+                <div class="mole" onclick="hit(this)"></div>
+            </div>
+            <div class="hole">
+                <div class="mole" onclick="hit(this)"></div>
+            </div>
+            <div class="hole">
+                <div class="mole" onclick="hit(this)"></div>
+            </div>
+            <div class="hole">
+                <div class="mole" onclick="hit(this)"></div>
+            </div>
+            <div class="hole">
+                <div class="mole" onclick="hit(this)"></div>
+            </div>
+            <div class="hole">
+                <div class="mole" onclick="hit(this)"></div>
+            </div>
+            <div class="hole">
+                <div class="mole" onclick="hit(this)"></div>
+            </div>
+            <div class="hole">
+                <div class="mole" onclick="hit(this)"></div>
+            </div>
+            <div class="hole">
+                <div class="mole" onclick="hit(this)"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-over">
+        <h1 style="font-size: 64px;">TIME UP!</h1>
+        <p id="final-score" style="font-size: 32px; color: var(--accent);"></p>
+        <button class="btn" onclick="location.reload()">PLAY AGAIN</button>
+    </div>
+
+    <script>
+        function speak(text) {
+            // Voice disabled
+        }
+        const moles = document.querySelectorAll('.mole');
+        const scoreEl = document.getElementById('score');
+        const timeEl = document.getElementById('time');
+        const comboEl = document.getElementById('combo');
+        let score = 0;
+        let combo = 0;
+        let timeLeft = 30;
+        let lastHole;
+        let gameActive = true;
+        let frenzy = false;
+
+        const holes = document.querySelectorAll('.hole');
+
+        function randomTime(min, max) {
+            return Math.round(Math.random() * (max - min) + min);
+        }
+
+        function randomHole() {
+            const idx = Math.floor(Math.random() * moles.length);
+            const hole = moles[idx];
+            if (hole === lastHole) return randomHole();
+            lastHole = hole;
+            return hole;
+        }
+
+        function peep() {
+            let time = randomTime(frenzy ? 200 : 500, frenzy ? 500 : 1000);
+            const holeIdx = Math.floor(Math.random() * holes.length);
+            const hole = holes[holeIdx];
+            const mole = hole.querySelector('.mole');
+
+            // Hole Variants
+            hole.classList.remove('fire', 'ice');
+            let timeMultiplier = 1;
+            if (Math.random() < 0.15) {
+                hole.classList.add('fire');
+                timeMultiplier = 0.5;
+            } else if (Math.random() < 0.1) {
+                hole.classList.add('ice');
+                timeMultiplier = 2.0;
+            }
+
+            // Randomize Mole Type
+            mole.classList.remove('golden', 'bomb', 'shielded', 'phantom');
+            mole.dataset.hp = 1;
+
+            const rand = Math.random();
+            if (rand < 0.08) mole.classList.add('golden');
+            else if (rand < 0.15) mole.classList.add('bomb');
+            else if (rand < 0.22) { mole.classList.add('shielded'); mole.dataset.hp = 2; }
+            else if (rand < 0.3) mole.classList.add('phantom');
+
+            mole.classList.add('up');
+            setTimeout(() => {
+                mole.classList.remove('up');
+                mole.classList.remove('hit');
+                if (gameActive) peep();
+            }, time * timeMultiplier);
+        }
+
+        function hit(mole) {
+            if (!mole.classList.contains('up') || mole.classList.contains('hit')) return;
+
+            if (mole.classList.contains('bomb')) {
+                score = Math.max(0, score - 10);
+                combo = 0;
+                speak("BOOM!");
+                document.body.classList.add('screen-shake');
+                setTimeout(() => document.body.classList.remove('screen-shake'), 300);
+            } else if (mole.classList.contains('shielded') && mole.dataset.hp > 1) {
+                mole.dataset.hp = 1;
+                mole.style.transform = 'scale(1.3)';
+                speak("SHIELD BROKEN!");
+                setTimeout(() => mole.style.transform = '', 100);
+                return; // Needs another hit
+            } else {
+                let points = 1;
+                if (mole.classList.contains('golden')) points = 10;
+                if (mole.parentElement.classList.contains('fire')) points *= 2;
+
+                score += points;
+                combo++;
+                if (combo % 10 === 0) speak(combo + " HIT COMBO!");
+            }
+
+            // Frenzy Logic
+            if (combo >= 5 && !frenzy) {
+                frenzy = true;
+                speak("FRENZY MODE!");
+                document.getElementById('frenzy').classList.add('show');
+                setTimeout(() => {
+                    frenzy = false;
+                    document.getElementById('frenzy').classList.remove('show');
+                }, 5000);
+            }
+
+            mole.classList.add('hit');
+            scoreEl.innerText = score;
+            comboEl.innerText = combo;
+
+            mole.style.transform = 'scale(1.2) rotate(10deg)';
+            setTimeout(() => mole.style.transform = '', 100);
+        }
+
+        function startGame() {
+            score = 0;
+            speak("READY? WHACK!");
+            peep();
+        }
+
+        startGame();
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

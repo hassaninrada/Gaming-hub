@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Angry Birds - GameHub Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: radial-gradient(circle at center, #2b32b2, #141e30);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Poppins', sans-serif;
+            overflow: hidden;
+        }
+
+        /* "Back to Hub" Button styling */
+        .hub-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            text-decoration: none;
+            border-radius: 30px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 100;
+        }
+
+        .hub-btn:hover {
+            background: #fff;
+            color: #141e30;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 255, 255, 0.4);
+        }
+
+        .hub-btn span {
+            font-size: 18px;
+        }
+
+        /* Game Container to look like a screen */
+        .game-wrapper {
+            position: relative;
+            width: 1000px;
+            height: 600px;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.6), 0 0 20px rgba(43, 50, 178, 0.4);
+            border-radius: 12px;
+            background: #000;
+            overflow: hidden;
+            border: 4px solid #333;
+        }
+
+        iframe {
+            width: 110%;
+            /* Scale up to push edge buttons off-screen */
+            height: 110%;
+            border: none;
+            display: block;
+            margin-left: -5%;
+            margin-top: -5%;
+        }
+
+        /* Decorative Background Elements */
+        .bg-pattern {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Background Grid -->
+    <div class="bg-pattern"></div>
+
+    <!-- Navigation -->
+    <a href="../index.html" class="hub-btn">
+        <span>←</span> BACK TO HUB
+    </a>
+
+    <!-- Main Game Area -->
+    <div class="game-wrapper">
+        <!-- Note: We cannot remove the internal 'More Games' button inside the iframe due to browser security policies (CORS). -->
+        <iframe src="https://funhtml5games.com?embed=angrybirds" scrolling="no"></iframe>
+    </div>
+
+</body>
+
+</html>

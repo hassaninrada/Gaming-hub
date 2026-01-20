@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Pro | GameHub Pro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .game-wrapper {
+            max-width: 900px;
+            margin: 40px auto;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+        }
+
+        .stats-bar {
+            padding: 15px 40px;
+            background: rgba(124, 77, 255, 0.1);
+            display: flex;
+            justify-content: space-around;
+            font-size: 14px;
+            font-weight: 800;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .stat-val {
+            color: var(--accent-secondary);
+            margin-left: 5px;
+        }
+
+        .game-body {
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.3);
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(8, 60px);
+            grid-template-rows: repeat(8, 60px);
+            border: 4px solid var(--accent-primary);
+            box-shadow: 0 0 30px rgba(124, 77, 255, 0.2);
+            background: #1e293b;
+        }
+
+        .square {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .square.white {
+            background: #cbd5e1;
+        }
+
+        .square.black {
+            background: #475569;
+        }
+
+        .square.selected {
+            background: #06b6d4 !important;
+        }
+
+        .square.highlight::after {
+            content: '';
+            width: 12px;
+            height: 12px;
+            background: rgba(0, 229, 255, 0.5);
+            border-radius: 50%;
+        }
+
+        .piece {
+            z-index: 5;
+            user-select: none;
+            transition: transform 0.2s;
+        }
+
+        .piece.white {
+            color: #fff;
+            filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.5));
+        }
+
+        .piece.black {
+            color: #000;
+            filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.4));
+        }
+
+        .game-controls {
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            background: rgba(0, 0, 0, 0.2);
+        }
+
+        /* --- PREMIUM GAME HEADER --- */
+        .game-header-premium {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100px;
+            z-index: 1000;
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            padding: 0 40px;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .header-inner {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .hub-back {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            text-decoration: none;
+            color: #fff;
+            pointer-events: auto;
+            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .hub-back:hover {
+            transform: translateX(-5px) scale(1.05);
+        }
+
+        .back-icon-wrap {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            transition: 0.3s;
+        }
+
+        .hub-back:hover .back-icon-wrap {
+            border-color: #7c4dff;
+            box-shadow: 0 0 20px rgba(124, 77, 255, 0.4);
+            color: #7c4dff;
+        }
+
+        .hub-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1;
+        }
+
+        .hub-small {
+            font-size: 12px;
+            font-weight: 800;
+            color: rgba(255, 255, 255, 0.5);
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+
+        .hub-main {
+            font-size: 26px;
+            font-weight: 900;
+            letter-spacing: -0.5px;
+            text-transform: uppercase;
+        }
+
+        .hub-main .accent {
+            color: #7c4dff;
+            text-shadow: 0 0 10px rgba(124, 77, 255, 0.5);
+        }
+
+        .game-title-badge {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 10px 25px;
+            border-radius: 50px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            font-size: 18px;
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.7);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <div class="bg-glow-container">
+        <div class="glow-sphere sphere-1"></div>
+        <div class="glow-sphere sphere-2"></div>
+    </div>
+
+    <header class="game-header-premium">
+        <div class="header-inner">
+            <a href="../index.html" class="hub-back">
+                <div class="back-icon-wrap">
+                    <i data-lucide="arrow-left" style="width:28px; height:28px"></i>
+                </div>
+                <div class="hub-text">
+                    <span class="hub-small">Return to</span>
+                    <span class="hub-main">GameHub <span class="accent">Pro</span></span>
+                </div>
+            </a>
+            <div class="game-title-badge">
+                <span>CHESS PRO AI</span>
+            </div>
+        </div>
+    </header>
+
+    <div id="lobby" class="game-wrapper"
+        style="position:fixed; top:50%; left:50%; transform:translate(-50%, -50%); z-index:1000; padding:40px; text-align:center; width:400px;">
+        <h2 class="accent-text" style="margin-bottom:20px; font-size:32px;">CHESS: NEURAL LINK</h2>
+        <div style="margin-bottom:30px; display:flex; flex-direction:column; gap:15px;">
+            <p style="font-weight:800; color:rgba(255,255,255,0.6)">CHOOSE YOUR MATCH</p>
+            <button class="btn-primary" onclick="startGame('pva')" style="width:100%;">PLAYER VS AI</button>
+            <button class="btn-secondary" onclick="startGame('pvp')" style="width:100%;">LOCAL MULTIPLAYER
+                (PVP)</button>
+        </div>
+    </div>
+
+    <div id="game-container" style="display:none;">
+        <div class="game-wrapper">
+            <div class="stats-bar">
+                <span>COMMANDER: <span class="stat-val" id="turn">WHITE</span></span>
+                <span>SYSTEM: <span class="stat-val" id="status">ENGAGED</span></span>
+                <span>MODE: <span class="stat-val" id="modeDisplay">AI LINK</span></span>
+            </div>
+
+            <div class="game-body">
+                <div id="board" class="board"></div>
+            </div>
+
+            <div class="game-controls">
+                <button class="btn-primary" onclick="location.reload()">RE-INITIALIZE</button>
+                <button class="btn-secondary" onclick="goBack()">EXIT HUB</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/shared.js"></script>
+    <script>
+        lucide.createIcons();
+
+        const SYMBOLS = {
+            k: { w: '♔', b: '♚' }, q: { w: '♕', b: '♛' }, r: { w: '♖', b: '♜' },
+            b: { w: '♗', b: '♝' }, n: { w: '♘', b: '♞' }, p: { w: '♙', b: '♟' }
+        };
+
+        const PIECE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 100 };
+
+        function startGame(mode) {
+            if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('click');
+            document.getElementById('lobby').style.display = 'none';
+            document.getElementById('game-container').style.display = 'block';
+            document.getElementById('modeDisplay').textContent = mode === 'pvp' ? 'LOCAL MULTI' : 'AI LINK';
+            window.game = new ChessGame(mode);
+        }
+
+        class ChessGame {
+            constructor(mode) {
+                this.mode = mode;
+                this.reset();
+            }
+
+            reset() {
+                this.board = this.createInitialBoard();
+                this.turn = 'w';
+                this.selected = null;
+                this.gameOver = false;
+                this.render();
+                this.updateStatus();
+            }
+
+            createInitialBoard() {
+                const b = Array(8).fill().map(() => Array(8).fill(null));
+                const order = ['r', 'n', 'b', 'q', 'k', 'b', 'n', 'r'];
+                for (let i = 0; i < 8; i++) {
+                    b[0][i] = { type: order[i], color: 'b' };
+                    b[1][i] = { type: 'p', color: 'b' };
+                    b[6][i] = { type: 'p', color: 'w' };
+                    b[7][i] = { type: order[i], color: 'w' };
+                }
+                return b;
+            }
+
+            render() {
+                const boardEl = document.getElementById('board');
+                boardEl.innerHTML = '';
+                for (let r = 0; r < 8; r++) {
+                    for (let c = 0; c < 8; c++) {
+                        const sq = document.createElement('div');
+                        sq.className = `square ${(r + c) % 2 === 0 ? 'white' : 'black'}`;
+                        sq.dataset.r = r; sq.dataset.c = c;
+
+                        const piece = this.board[r][c];
+                        if (piece) {
+                            const pEl = document.createElement('div');
+                            pEl.className = `piece ${piece.color === 'w' ? 'white' : 'black'}`;
+                            pEl.textContent = SYMBOLS[piece.type][piece.color];
+                            sq.appendChild(pEl);
+                        }
+
+                        if (this.selected && this.selected.r === r && this.selected.c === c) sq.classList.add('selected');
+                        if (this.selected && this.isValidMove(this.selected.r, this.selected.c, r, c)) sq.classList.add('highlight');
+
+                        sq.onclick = () => this.handleSquareClick(r, c);
+                        boardEl.appendChild(sq);
+                    }
+                }
+            }
+
+            handleSquareClick(r, c) {
+                if (this.gameOver) return;
+                if (this.mode === 'pva' && this.turn === 'b') return;
+
+                if (this.selected) {
+                    if (this.isValidMove(this.selected.r, this.selected.c, r, c)) {
+                        this.move(this.selected.r, this.selected.c, r, c);
+                        this.selected = null;
+                        this.turn = this.turn === 'w' ? 'b' : 'w';
+                        if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('move');
+                        this.render();
+                        this.updateStatus();
+                        if (this.mode === 'pva' && this.turn === 'b') setTimeout(() => this.aiTurn(), 500);
+                        return;
+                    }
+                }
+
+                const piece = this.board[r][c];
+                if (piece && piece.color === this.turn) {
+                    this.selected = { r, c };
+                    if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('click');
+                } else {
+                    this.selected = null;
+                }
+                this.render();
+            }
+
+            isValidMove(fr, fc, tr, tc) {
+                const piece = this.board[fr][fc];
+                const target = this.board[tr][tc];
+                if (!piece) return false;
+                if (target && target.color === piece.color) return false;
+
+                const dr = tr - fr;
+                const dc = tc - fc;
+                const adr = Math.abs(dr);
+                const adc = Math.abs(dc);
+
+                switch (piece.type) {
+                    case 'p':
+                        const dir = piece.color === 'w' ? -1 : 1;
+                        if (dc === 0 && !target) {
+                            if (dr === dir) return true;
+                            if (dr === 2 * dir && ((piece.color === 'w' && fr === 6) || (piece.color === 'b' && fr === 1)) && !this.board[fr + dir][fc]) return true;
+                        }
+                        if (adc === 1 && dr === dir && target) return true;
+                        return false;
+                    case 'r': return (dr === 0 || dc === 0) && this.isPathClear(fr, fc, tr, tc);
+                    case 'n': return (adr === 2 && adc === 1) || (adr === 1 && adc === 2);
+                    case 'b': return (adr === adc) && this.isPathClear(fr, fc, tr, tc);
+                    case 'q': return (dr === 0 || dc === 0 || adr === adc) && this.isPathClear(fr, fc, tr, tc);
+                    case 'k': return adr <= 1 && adc <= 1;
+                }
+                return false;
+            }
+
+            isPathClear(fr, fc, tr, tc) {
+                const stepR = Math.sign(tr - fr);
+                const stepC = Math.sign(tc - fc);
+                let r = fr + stepR, c = fc + stepC;
+                while (r !== tr || c !== tc) {
+                    if (this.board[r][c]) return false;
+                    r += stepR; c += stepC;
+                }
+                return true;
+            }
+
+            move(fr, fc, tr, tc) {
+                const piece = this.board[fr][fc];
+                const target = this.board[tr][tc];
+                if (target && target.type === 'k') {
+                    this.gameOver = true;
+                    if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('win');
+                    GameHubStats.reportScore('chess', 1000);
+                    setTimeout(() => alert(piece.color === 'w' ? "SYSTEM PURGED - WHITE WINS" : "CORE CRITICAL - BLACK WINS"), 100);
+                }
+                this.board[tr][tc] = piece;
+                this.board[fr][fc] = null;
+                if (piece.type === 'p' && (tr === 0 || tr === 7)) piece.type = 'q';
+            }
+
+            aiTurn() {
+                if (this.gameOver) return;
+                const moves = [];
+                for (let fr = 0; fr < 8; fr++) {
+                    for (let fc = 0; fc < 8; fc++) {
+                        if (this.board[fr][fc] && this.board[fr][fc].color === 'b') {
+                            for (let tr = 0; tr < 8; tr++) {
+                                for (let tc = 0; tc < 8; tc++) {
+                                    if (this.isValidMove(fr, fc, tr, tc)) {
+                                        let score = Math.random() * 5; // Slight randomness
+                                        const target = this.board[tr][tc];
+                                        if (target) score += PIECE_VALUES[target.type] * 50;
+                                        // Bonus for moving towards center
+                                        score += (4 - Math.abs(tr - 3.5)) + (4 - Math.abs(tc - 3.5));
+                                        moves.push({ fr, fc, tr, tc, score });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (moves.length === 0) {
+                    this.gameOver = true;
+                    alert("STALEMATE DETECTED");
+                    return;
+                }
+
+                moves.sort((a, b) => b.score - a.score);
+                const best = moves[0];
+                this.move(best.fr, best.fc, best.tr, best.tc);
+                if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('move');
+                this.turn = 'w';
+                this.render();
+                this.updateStatus();
+            }
+
+            updateStatus() {
+                document.getElementById('turn').textContent = this.turn === 'w' ? 'WHITE' : 'BLACK';
+                document.getElementById('status').textContent = this.gameOver ? "OFFLINE" : "ENGAGED";
+            }
+        }
+
+        function goBack() { window.location.href = '../index.html'; }
+    </script>
+</body>
+
+</html>

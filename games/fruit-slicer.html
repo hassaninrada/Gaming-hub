@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fruit Ninja: Slice Master Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #FF5722;
+            --accent: #4CAF50;
+            --wood: #3e2723;
+            --text: #ffffff;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--wood);
+            background-image:
+                linear-gradient(90deg, rgba(0, 0, 0, 0.1) 1px, transparent 1px),
+                linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 100px 100%, 100% 100px;
+            color: var(--text);
+            overflow: hidden;
+        }
+
+        #game-bg {
+            position: fixed;
+            inset: 0;
+            background:
+                linear-gradient(45deg, #4e342e 25%, transparent 25%) -50px 0,
+                linear-gradient(-45deg, #4e342e 25%, transparent 25%) -50px 0,
+                linear-gradient(45deg, transparent 75%, #4e342e 75%),
+                linear-gradient(-45deg, transparent 75%, #4e342e 75%);
+            background-size: 100px 100px;
+            background-color: #3e2723;
+            filter: contrast(1.1) brightness(0.8);
+            z-index: -1;
+        }
+
+        .premium-header {
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 100;
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: #fff;
+            font-weight: 800;
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            cursor: crosshair;
+        }
+
+        .stats {
+            position: fixed;
+            top: 90px;
+            left: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 50;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(15px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+
+        .stat-val {
+            font-size: 42px;
+            font-weight: 900;
+            color: #FFD600;
+            text-shadow: 0 0 15px rgba(255, 214, 0, 0.5);
+        }
+
+        .stat-label {
+            font-size: 14px;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: var(--accent);
+            letter-spacing: 2px;
+        }
+
+        #game-over {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 200;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #FF5722, #FF8A65);
+            color: #fff;
+            border: none;
+            padding: 18px 50px;
+            border-radius: 50px;
+            font-weight: 900;
+            cursor: pointer;
+            margin-top: 20px;
+            font-size: 20px;
+            box-shadow: 0 5px 15px rgba(255, 87, 34, 0.4);
+            transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .btn:hover {
+            transform: scale(1.1) translateY(-5px);
+            box-shadow: 0 15px 30px rgba(255, 87, 34, 0.6);
+        }
+
+        .lives {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .life {
+            color: #ff5252;
+            fill: #ff5252;
+            filter: drop-shadow(0 0 5px #ff5252);
+        }
+
+        .life.lost {
+            color: #333;
+            fill: none;
+            filter: none;
+            opacity: 0.3;
+        }
+
+        .combo-meter {
+            position: fixed;
+            top: 280px;
+            left: 30px;
+            font-size: 48px;
+            font-weight: 950;
+            color: #FFD600;
+            opacity: 0;
+            transition: 0.3s;
+            text-shadow: 0 0 30px rgba(255, 214, 0, 0.8);
+            pointer-events: none;
+        }
+
+        .combo-meter.show {
+            opacity: 1;
+            transform: scale(1.2) rotate(-5deg);
+        }
+
+        .frenzy-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            box-shadow: inset 0 0 150px rgba(0, 229, 255, 0);
+            transition: 1s;
+            z-index: 10;
+        }
+
+        .frenzy-overlay.active {
+            box-shadow: inset 0 0 150px rgba(0, 229, 255, 0.4);
+            animation: overlay-pulse 2s infinite;
+        }
+
+        @keyframes overlay-pulse {
+
+            0%,
+            100% {
+                background: rgba(0, 229, 255, 0.05);
+            }
+
+            50% {
+                background: rgba(0, 229, 255, 0.1);
+            }
+        }
+
+        .shake {
+            animation: shake 0.3s cubic-bezier(.36, .07, .19, .97) both;
+        }
+
+        @keyframes shake {
+
+            10%,
+            90% {
+                transform: translate3d(-3px, 0, 0);
+            }
+
+            20%,
+            80% {
+                transform: translate3d(6px, 0, 0);
+            }
+
+            30%,
+            50%,
+            70% {
+                transform: translate3d(-10px, 0, 0);
+            }
+
+            40%,
+            60% {
+                transform: translate3d(10px, 0, 0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div id="game-bg"></div>
+    <header class="premium-header">
+        <a href="../index.html" class="back-btn"><i data-lucide="arrow-left"></i><span>BACK TO HUB</span></a>
+        <div style="font-weight: 900; font-size: 24px; letter-spacing: 2px;">FRUIT <span
+                style="color: var(--accent);">NINJA</span></div>
+        <div style="width: 120px;"></div>
+    </header>
+
+    <div class="stats">
+        <div>
+            <div class="stat-label">Score</div>
+            <div class="stat-val" id="score">0</div>
+        </div>
+        <div>
+            <div class="stat-label">Lives</div>
+            <div class="lives" id="lives">
+                <i data-lucide="heart" class="life"></i>
+                <i data-lucide="heart" class="life"></i>
+                <i data-lucide="heart" class="life"></i>
+            </div>
+        </div>
+    </div>
+
+    <div class="combo-meter" id="combo-meter">3 COMBO!</div>
+    <div class="frenzy-overlay" id="frenzy"></div>
+
+    <div id="game-over">
+        <h1 style="font-size: 84px; font-weight: 900; color: #ff5252;">WASTED</h1>
+        <p id="final-score" style="font-size: 32px; color: var(--accent); margin-top: 20px;"></p>
+        <button class="btn" onclick="location.reload()">PLAY AGAIN</button>
+    </div>
+
+    <canvas id="canvas"></canvas>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const livesContainer = document.getElementById('lives');
+        const gameOverEl = document.getElementById('game-over');
+        const finalScoreEl = document.getElementById('final-score');
+
+        let score = 0;
+        let lives = 3;
+        let gameActive = true;
+        let fruits = [];
+        let particles = [];
+        let splashes = []; // Background stains
+        let trail = [];
+        let frenzyActive = false;
+        let lastFrenzyScore = 0;
+
+        function speak(text) {
+            // Voice disabled
+        }
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const FRUIT_TYPES = [
+            { color: '#FFEB3B', size: 35, emoji: '🍋', name: 'lemon' },
+            { color: '#F44336', size: 40, emoji: '🍎', name: 'apple' },
+            { color: '#4CAF50', size: 50, emoji: '🍉', name: 'watermelon' },
+            { color: '#FF9800', size: 40, emoji: '🍊', name: 'orange' },
+            { color: '#00E5FF', size: 35, emoji: '❄️', name: 'freeze', isSpecial: true, effect: 'freeze' },
+            { color: '#FFD600', size: 35, emoji: '⭐', name: 'gold', isSpecial: true, effect: 'double' },
+            { color: '#212121', size: 30, emoji: '💣', name: 'bomb', isBomb: true }
+        ];
+
+        let combo = 0;
+        let comboTimer = null;
+        let timeScale = 1;
+        let scoreMultiplier = 1;
+
+        class Splash {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                this.life = 1; // 1 to 0 (fades out)
+                this.size = Math.random() * 40 + 60;
+                this.rotation = Math.random() * Math.PI * 2;
+            }
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.globalAlpha = this.life * 0.4;
+                ctx.fillStyle = this.color;
+
+                // Draw irregular splatter shape
+                ctx.beginPath();
+                for (let i = 0; i < 8; i++) {
+                    const angle = (i / 8) * Math.PI * 2;
+                    const r = this.size * (0.5 + Math.random() * 0.5);
+                    const tx = Math.cos(angle) * r;
+                    const ty = Math.sin(angle) * r;
+                    if (i === 0) ctx.moveTo(tx, ty);
+                    else ctx.lineTo(tx, ty);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+                this.life -= 0.0015; // Splashes last a while
+            }
+        }
+
+        class Fruit {
+            constructor() {
+                this.type = FRUIT_TYPES[Math.floor(Math.random() * FRUIT_TYPES.length)];
+                this.x = Math.random() * (canvas.width - 200) + 100;
+                this.y = canvas.height + 50;
+                this.vx = (Math.random() - 0.5) * 6;
+                this.vy = -(Math.random() * 7 + 13);
+                this.sliced = false;
+                this.gravity = 0.22;
+                this.isCritical = Math.random() < 0.05 && !this.type.isBomb;
+                this.rotation = 0;
+                this.rotSpeed = (Math.random() - 0.5) * 0.15;
+            }
+
+            update() {
+                this.x += this.vx * timeScale;
+                this.y += this.vy * timeScale;
+                this.vy += this.gravity * timeScale;
+                this.rotation += this.rotSpeed * timeScale;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+
+                // Shadow
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                ctx.shadowOffsetY = 15;
+
+                // Emoji Fruit Drawing
+                ctx.font = `${this.type.size * 2}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+
+                if (this.isCritical) {
+                    ctx.shadowBlur = 30;
+                    ctx.shadowColor = '#fff';
+                    ctx.filter = `brightness(${Math.sin(Date.now() / 50) * 20 + 100}%)`;
+                }
+
+                ctx.fillText(this.type.emoji, 0, 0);
+                ctx.restore();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x; this.y = y;
+                this.vx = (Math.random() - 0.5) * 12;
+                this.vy = (Math.random() - 0.5) * 12;
+                this.life = 1;
+                this.color = color;
+                this.size = Math.random() * 4 + 2;
+            }
+            update() {
+                this.x += this.vx; this.y += this.vy;
+                this.vy += 0.2; // gravity for bits
+                this.life -= 0.02;
+            }
+            draw() {
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+            }
+        }
+
+        function loseLife() {
+            lives--;
+            const lifeIcons = livesContainer.querySelectorAll('.life');
+            if (lifeIcons[lives]) lifeIcons[lives].classList.add('lost');
+            if (lives <= 0) endGame();
+            speak("STRIKE!");
+        }
+
+        function endGame() {
+            gameActive = false;
+            gameOverEl.style.display = 'flex';
+            finalScoreEl.innerText = `Final Score: ${score}`;
+            speak("GAME OVER. FINAL SCORE " + score);
+        }
+
+        function sliceFruit(fruit) {
+            if (fruit.type.isBomb) {
+                score = Math.max(0, score - 100);
+                scoreEl.innerText = score;
+                speak("BOMB!");
+                document.body.classList.add('shake');
+                setTimeout(() => document.body.classList.remove('shake'), 400);
+                fruit.isDead = true;
+                return;
+            }
+            fruit.sliced = true;
+            fruit.isDead = true;
+
+            // Background Stain
+            splashes.push(new Splash(fruit.x, fruit.y, fruit.type.color));
+
+            // Combo Logic
+            combo++;
+            clearTimeout(comboTimer);
+            updateComboUI();
+
+            comboTimer = setTimeout(() => {
+                combo = 0;
+                updateComboUI();
+            }, 800);
+
+            // Special Effects
+            if (fruit.type.effect === 'freeze') {
+                triggerFreeze();
+            } else if (fruit.type.effect === 'double') {
+                triggerDouble();
+            }
+
+            if (fruit.isCritical) {
+                score += 100 * scoreMultiplier;
+                speak("CRITICAL!");
+                document.body.classList.add('shake');
+                setTimeout(() => document.body.classList.remove('shake'), 400);
+            } else {
+                score += 10 * scoreMultiplier;
+            }
+
+            if (combo > 2) {
+                score += 5;
+                if (combo % 5 === 0) speak(combo + " COMBO!");
+            }
+
+            scoreEl.innerText = score;
+            checkFrenzyThreshold();
+
+            // Sliced Halves Particles
+            for (let i = 0; i < 25; i++) {
+                particles.push(new Particle(fruit.x, fruit.y, fruit.type.color));
+            }
+        }
+
+        function checkFrenzyThreshold() {
+            if (score - lastFrenzyScore >= 500) {
+                lastFrenzyScore = score;
+                triggerFrenzyWave();
+            }
+        }
+
+        async function triggerFrenzyWave() {
+            speak("FRENZY!");
+            frenzyActive = true;
+            document.getElementById('frenzy').classList.add('active');
+
+            for (let i = 0; i < 50; i++) {
+                if (!gameActive) break;
+                fruits.push(new Fruit());
+                await new Promise(r => setTimeout(r, 80));
+            }
+
+            setTimeout(() => {
+                frenzyActive = false;
+                document.getElementById('frenzy').classList.remove('active');
+            }, 5000);
+        }
+
+        function updateComboUI() {
+            const meter = document.getElementById('combo-meter');
+            if (combo > 2) {
+                meter.innerText = combo + " COMBO!";
+                meter.classList.add('show');
+            } else {
+                meter.classList.remove('show');
+            }
+        }
+
+        function triggerFreeze() {
+            timeScale = 0.4;
+            speak("FREEZE!");
+            document.getElementById('frenzy').classList.add('active');
+            setTimeout(() => {
+                timeScale = 1;
+                document.getElementById('frenzy').classList.remove('active');
+            }, 5000);
+        }
+
+        function triggerDouble() {
+            scoreMultiplier = 2;
+            speak("DOUBLE SCORE!");
+            setTimeout(() => scoreMultiplier = 1, 6000);
+        }
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (!gameActive) return;
+            trail.push({ x: e.clientX, y: e.clientY, life: 1 });
+
+            // Slash detection
+            fruits.forEach(f => {
+                if (!f.sliced) {
+                    const dist = Math.sqrt((e.clientX - f.x) ** 2 + (e.clientY - f.y) ** 2);
+                    if (dist < f.type.size + 20) sliceFruit(f);
+                }
+            });
+        });
+
+        // Touch support
+        canvas.addEventListener('touchmove', (e) => {
+            if (!gameActive) return;
+            const t = e.touches[0];
+            trail.push({ x: t.clientX, y: t.clientY, life: 1 });
+            fruits.forEach(f => {
+                if (!f.sliced) {
+                    const dist = Math.sqrt((t.clientX - f.x) ** 2 + (t.clientY - f.y) ** 2);
+                    if (dist < f.type.size + 20) sliceFruit(f);
+                }
+            });
+        }, { passive: true });
+
+        function animate() {
+            if (!gameActive) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw Background Stains
+            splashes = splashes.filter(s => s.life > 0);
+            splashes.forEach(s => s.draw());
+
+            // Spawn
+            if (Math.random() < 0.035) fruits.push(new Fruit());
+
+            // Fruits
+            fruits = fruits.filter(f => f.y < canvas.height + 150 && !f.isDead);
+            fruits.forEach(f => {
+                f.update();
+                f.draw();
+                if (f.y > canvas.height + 100 && !f.sliced && !f.type.isBomb) {
+                    f.isDead = true;
+                    loseLife();
+                }
+            });
+
+            // Particles
+            particles = particles.filter(p => p.life > 0);
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            // Katana Blade Trail
+            if (trail.length > 2) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+
+                // Color based on combo/speed
+                const trailColor = frenzyActive ? '#00E5FF' : (combo > 5 ? '#FFD600' : '#ffffff');
+                ctx.strokeStyle = trailColor;
+                ctx.shadowBlur = 15;
+                ctx.shadowColor = trailColor;
+
+                for (let i = 0; i < trail.length; i++) {
+                    const t = trail[i];
+                    ctx.lineWidth = t.life * 12;
+                    if (i === 0) ctx.moveTo(t.x, t.y);
+                    else ctx.lineTo(t.x, t.y);
+                    t.life -= 0.08;
+                }
+                ctx.stroke();
+                ctx.restore();
+            }
+            trail = trail.filter(t => t.life > 0);
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

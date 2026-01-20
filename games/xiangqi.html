@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xiangqi (Chinese Chess) | GameHub Pro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .game-wrapper {
+            max-width: 900px;
+            margin: 40px auto;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+        }
+
+        .stats-bar {
+            padding: 20px 40px;
+            background: rgba(124, 77, 255, 0.1);
+            display: flex;
+            justify-content: space-around;
+            font-size: 16px;
+            font-weight: 800;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .game-body {
+            padding: 40px;
+            background: rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .xiangqi-board {
+            width: 500px;
+            height: 560px;
+            background: #e3c08d;
+            border: 5px solid #8b5e34;
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(9, 1fr);
+            position: relative;
+            padding: 30px;
+        }
+
+        /* Lines */
+        .board-lines {
+            position: absolute;
+            inset: 30px;
+            pointer-events: none;
+            border: 1px solid #000;
+        }
+
+        .river {
+            position: absolute;
+            top: 50%;
+            left: 30px;
+            right: 30px;
+            height: 60px;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            color: rgba(0, 0, 0, 0.2);
+            text-transform: uppercase;
+        }
+
+        .piece {
+            width: 45px;
+            height: 45px;
+            background: #fdf5e6;
+            border: 2px solid #8b5e34;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            position: absolute;
+            transform: translate(-50%, -50%);
+            z-index: 10;
+        }
+
+        .piece.red {
+            color: #ef4444;
+            border-color: #ef4444;
+        }
+
+        .piece.black {
+            color: #000;
+            border-color: #000;
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <div class="bg-glow-container">
+        <div class="glow-sphere sphere-1"></div>
+    </div>
+
+    <header class="main-header" style="position: relative; background: transparent; border: none;">
+        <div class="nav-container">
+            <a href="../index.html" class="logo" style="text-decoration: none; color: inherit;">
+                <i data-lucide="arrow-left"></i>
+                <span>BACK TO <span class="accent-text">HUB</span></span>
+            </a>
+            <h2 style="font-weight:800; letter-spacing:-1px">XIANGQI</h2>
+        </div>
+    </header>
+
+    <div class="game-wrapper">
+        <div class="stats-bar">
+            <span>TURN: <span id="turn">RED</span></span>
+        </div>
+        <div class="game-body">
+            <div class="xiangqi-board" id="board">
+                <div class="river">The River</div>
+                <!-- Pieces injected by JS -->
+            </div>
+            <button class="btn-primary" onclick="initGame()">RESET</button>
+        </div>
+    </div>
+
+    <script src="../js/shared.js"></script>
+    <script>
+        lucide.createIcons();
+        function initGame() {
+            const boardEl = document.getElementById('board');
+            // Simplified setup for visual demonstration
+            const pieces = [
+                { r: 0, c: 0, type: '車', side: 'black' },
+                { r: 0, c: 8, type: '車', side: 'black' },
+                { r: 9, c: 0, type: '俥', side: 'red' },
+                { r: 9, c: 8, type: '俥', side: 'red' }
+            ];
+
+            pieces.forEach(p => {
+                const el = document.createElement('div');
+                el.className = `piece ${p.side}`;
+                el.innerText = p.type;
+                el.style.top = `${(p.r / 9) * 100}%`;
+                el.style.left = `${(p.c / 8) * 100}%`;
+                boardEl.appendChild(el);
+            });
+        }
+        initGame();
+    </script>
+</body>
+
+</html>

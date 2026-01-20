@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emoji Catcher: Rain of Smiles</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #FFD600;
+            --accent: #FF4081;
+            --bg: #121212;
+            --basket: #4CAF50;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        .premium-header {
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            position: fixed;
+            top: 0;
+            width: 100%;
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: #fff;
+            font-weight: 800;
+        }
+
+        .game-screen {
+            height: 100vh;
+            position: relative;
+            background: linear-gradient(180deg, #121212 0%, #1a1a2e 100%);
+        }
+
+        .stats {
+            position: fixed;
+            top: 100px;
+            left: 40px;
+            z-index: 50;
+        }
+
+        .stat-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 15px;
+            margin-bottom: 10px;
+        }
+
+        .val {
+            font-size: 32px;
+            font-weight: 900;
+        }
+
+        .lbl {
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: var(--primary);
+        }
+
+        #basket {
+            position: absolute;
+            bottom: 40px;
+            width: 100px;
+            height: 60px;
+            background: var(--basket);
+            border-radius: 10px 10px 40px 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 10px 30px rgba(76, 175, 80, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #basket::after {
+            content: '🛒';
+            font-size: 30px;
+        }
+
+        #basket.magnet::before {
+            content: '';
+            position: absolute;
+            top: -100px;
+            left: -100px;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(0, 229, 255, 0.2) 0%, transparent 60%);
+            border-radius: 50%;
+            animation: pulse 1s infinite;
+        }
+
+        #basket.shield::after {
+            content: '🛡️';
+        }
+
+        .emoji {
+            position: absolute;
+            font-size: 40px;
+            user-select: none;
+            transition: left 0.2s linear;
+        }
+
+        .emoji.power {
+            animation: emoji-glow 1s infinite alternate;
+        }
+
+        @keyframes emoji-glow {
+            from {
+                filter: drop-shadow(0 0 5px #fff);
+            }
+
+            to {
+                filter: drop-shadow(0 0 15px var(--accent));
+            }
+        }
+
+        #game-over {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 200;
+        }
+
+        .btn {
+            background: var(--primary);
+            color: #000;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-weight: 900;
+            cursor: pointer;
+            margin-top: 20px;
+            font-size: 18px;
+        }
+
+        .basket-trail {
+            position: absolute;
+            bottom: 40px;
+            height: 60px;
+            background: rgba(76, 175, 80, 0.3);
+            border-radius: 40px;
+            pointer-events: none;
+            z-index: 40;
+            transition: width 0.1s;
+        }
+
+        .weather-banner {
+            position: fixed;
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 30px;
+            border-radius: 30px;
+            font-weight: 900;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            opacity: 0;
+            transition: 0.5s;
+            z-index: 60;
+        }
+
+        .weather-banner.active {
+            opacity: 1;
+            transform: translateX(-50%) translateY(20px);
+        }
+    </style>
+</head>
+
+<body>
+    <header class="premium-header">
+        <a href="../index.html" class="back-btn"><i data-lucide="arrow-left"></i><span>BACK</span></a>
+        <div style="font-weight: 900; font-size: 24px; color: var(--primary);">EMOJI <span
+                style="color: #fff;">CATCHER</span></div>
+        <div style="width: 80px;"></div>
+    </header>
+
+    <div class="stats">
+        <div class="stat-item">
+            <div class="lbl">Caught</div>
+            <div class="val" id="score">0</div>
+        </div>
+        <div class="stat-item">
+            <div class="lbl">Missed</div>
+            <div class="val" id="missed">0</div>
+        </div>
+    </div>
+
+    <div class="game-screen" id="game-screen">
+        <div id="basket"></div>
+        <div id="weather-banner" class="weather-banner">WINDY CONDITIONS</div>
+    </div>
+
+    <div id="game-over">
+        <h1 style="font-size: 64px;">GAME OVER</h1>
+        <div style="font-size: 32px; margin-top: 10px;">Total Emojis Caught: <span id="final-score"
+                style="color: var(--primary);">0</span></div>
+        <button class="btn" onclick="location.reload()">TRY AGAIN</button>
+    </div>
+
+    <script>
+        const gameScreen = document.getElementById('game-screen');
+        const basket = document.getElementById('basket');
+        const scoreEl = document.getElementById('score');
+        const missedEl = document.getElementById('missed');
+        const finalScoreEl = document.getElementById('final-score');
+        const gameOverEl = document.getElementById('game-over');
+
+        let score = 0;
+        let missed = 0;
+        let gameActive = true;
+        let basketX = window.innerWidth / 2;
+        let targetX = window.innerWidth / 2;
+        let hasMagnet = false;
+        let hasShield = false;
+        let isTurbo = false;
+        let weatherMode = 'normal'; // 'normal', 'windy', 'storm'
+
+        function speak(text) {
+            // Voice announcements removed per request
+        }
+
+        const GOOD_EMOJIS = ['😀', '😍', '😎', '🥳', '💎', '⭐', '🍎', '🍓', '🍩', '🍕'];
+        const BAD_EMOJIS = ['💣', '💩', '💀'];
+        const POWER_UPS = [
+            { id: 'magnet', icon: '🧲' },
+            { id: 'shield', icon: '🛡️' },
+            { id: 'gold', icon: '💰' }
+        ];
+
+        document.addEventListener('mousemove', (e) => {
+            if (!gameActive) return;
+            targetX = e.clientX;
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' || e.shiftKey) isTurbo = true;
+        });
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'Space' || e.shiftKey) isTurbo = false;
+        });
+
+        function updateBasket() {
+            if (!gameActive) return;
+            const lerp = isTurbo ? 0.3 : 0.15;
+            basketX += (targetX - basketX) * lerp;
+
+            const bWidth = basket.offsetWidth;
+            if (basketX < bWidth / 2) basketX = bWidth / 2;
+            if (basketX > window.innerWidth - bWidth / 2) basketX = window.innerWidth - bWidth / 2;
+
+            basket.style.left = basketX + 'px';
+            basket.style.transform = `translateX(-50%) skewX(${(targetX - basketX) * 0.1}deg)`;
+
+            if (isTurbo && Math.abs(targetX - basketX) > 10) {
+                const trail = document.createElement('div');
+                trail.className = 'basket-trail';
+                trail.style.left = basket.style.left;
+                trail.style.width = basket.offsetWidth + 'px';
+                gameScreen.appendChild(trail);
+                setTimeout(() => trail.remove(), 200);
+            }
+
+            requestAnimationFrame(updateBasket);
+        }
+        updateBasket();
+
+        function spawnEmoji() {
+            if (!gameActive) return;
+            const emoji = document.createElement('div');
+            emoji.className = 'emoji';
+
+            const rand = Math.random();
+            let type = 'good';
+
+            if (rand < 0.1) {
+                type = 'bad';
+                emoji.innerText = BAD_EMOJIS[Math.floor(Math.random() * BAD_EMOJIS.length)];
+            } else if (rand < 0.15) {
+                type = 'rocket';
+                emoji.innerText = '🚀';
+                emoji.classList.add('power');
+            } else if (rand < 0.2) {
+                type = 'power';
+                const p = POWER_UPS[Math.floor(Math.random() * POWER_UPS.length)];
+                emoji.innerText = p.icon;
+                emoji.dataset.powerId = p.id;
+                emoji.classList.add('power');
+            } else {
+                emoji.innerText = GOOD_EMOJIS[Math.floor(Math.random() * GOOD_EMOJIS.length)];
+            }
+
+            emoji.style.left = Math.random() * (window.innerWidth - 60) + 30 + 'px';
+            emoji.dataset.type = type;
+
+            let y = -50;
+            let x = Math.random() * (window.innerWidth - 60) + 30;
+            let speed = Math.random() * 3 + 3 + (score / 100);
+            if (type === 'rocket') speed *= 3;
+            if (weatherMode === 'storm') speed *= 1.5;
+
+            gameScreen.appendChild(emoji);
+
+            const fall = setInterval(() => {
+                if (!gameActive) { clearInterval(fall); emoji.remove(); return; }
+                y += speed;
+
+                if (weatherMode === 'windy' && type !== 'bad') {
+                    x += Math.sin(y / 50) * 5;
+                }
+
+                emoji.style.left = x + 'px';
+                emoji.style.top = y + 'px';
+
+                // Magnet logic
+                if (hasMagnet && type !== 'bad') {
+                    const ex = parseFloat(emoji.style.left);
+                    const dx = basketX - ex;
+                    if (Math.abs(dx) < 200) {
+                        emoji.style.left = (ex + dx * 0.15) + 'px';
+                    }
+                }
+
+                // Check collision
+                const bRect = basket.getBoundingClientRect();
+                const eRect = emoji.getBoundingClientRect();
+
+                if (eRect.bottom >= bRect.top && eRect.left < bRect.right && eRect.right > bRect.left && eRect.top < bRect.bottom) {
+                    clearInterval(fall);
+                    emoji.remove();
+
+                    if (type === 'bad') {
+                        if (hasShield) {
+                            deactivatePower('shield');
+                        } else {
+                            // endGame(); // NO-OUT MODE
+                            score = Math.max(0, score - 100);
+                            scoreEl.innerText = score;
+                        }
+                    } else if (type === 'power') {
+                        activatePower(emoji.dataset.powerId);
+                    } else if (type === 'rocket') {
+                        score += 50;
+                        scoreEl.innerText = score;
+                        speak("ROCKET CATCH!");
+                    } else {
+                        score += (weatherMode === 'storm' ? 2 : 1);
+                        scoreEl.innerText = score;
+                        if (score > 0 && score % 100 === 0) checkWeatherCycle();
+                    }
+                }
+
+                if (y > window.innerHeight) {
+                    clearInterval(fall);
+                    emoji.remove();
+                    if (type === 'good') {
+                        missed++;
+                        missedEl.innerText = missed;
+                        // if (missed >= 5) endGame(); // NO-OUT MODE
+                    }
+                }
+            }, 10);
+
+            setTimeout(spawnEmoji, Math.max(800 - (score * 5), 300));
+        }
+
+        function activatePower(id) {
+            if (id === 'gold') {
+                score += 10;
+                scoreEl.innerText = score;
+                return;
+            }
+            if (id === 'magnet') hasMagnet = true;
+            if (id === 'shield') hasShield = true;
+            basket.classList.add(id);
+            setTimeout(() => deactivatePower(id), 8000);
+        }
+
+        function deactivatePower(id) {
+            if (id === 'magnet') hasMagnet = false;
+            if (id === 'shield') hasShield = false;
+            basket.classList.remove(id);
+        }
+
+        function checkWeatherCycle() {
+            if (weatherMode !== 'normal') return;
+            const rand = Math.random();
+            if (rand < 0.4) startWeather('windy');
+            else if (rand < 0.7) startWeather('storm');
+        }
+
+        function startWeather(mode) {
+            weatherMode = mode;
+            const banner = document.getElementById('weather-banner');
+            banner.innerText = mode.toUpperCase() + " ALERT!";
+            banner.classList.add('active');
+            speak(mode.toUpperCase() + " WARNING. GET READY.");
+
+            if (mode === 'storm') gameScreen.style.filter = 'sepia(0.5) hue-rotate(200deg)';
+
+            setTimeout(() => {
+                weatherMode = 'normal';
+                banner.classList.remove('active');
+                gameScreen.style.filter = '';
+                speak("WEATHER CLEARED.");
+            }, 10000);
+        }
+
+        function endGame() {
+            gameActive = false;
+            speak("GAME OVER. FINAL SCORE " + score);
+            gameOverEl.style.display = 'flex';
+            finalScoreEl.innerText = score;
+        }
+
+        spawnEmoji();
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

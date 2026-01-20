@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Guess: Speak to Play</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --primary: #9C27B0;
+            --accent: #E91E63;
+            --bg: #121212;
+            --glass: rgba(255, 255, 255, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: var(--bg);
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .premium-header {
+            height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 30px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: #fff;
+            font-weight: 800;
+        }
+
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .mic-container {
+            width: 150px;
+            height: 150px;
+            background: var(--glass);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 4px solid var(--primary);
+            margin-bottom: 30px;
+            cursor: pointer;
+            transition: 0.3s;
+            position: relative;
+        }
+
+        .mic-container.listening {
+            animation: pulse 1.5s infinite;
+            border-color: var(--accent);
+            box-shadow: 0 0 50px rgba(233, 30, 99, 0.4);
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .mic-icon {
+            width: 60px;
+            height: 60px;
+            color: var(--primary);
+        }
+
+        .listening .mic-icon {
+            color: var(--accent);
+        }
+
+        .msg {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 20px;
+            min-height: 40px;
+        }
+
+        .heard {
+            font-size: 48px;
+            font-weight: 900;
+            color: var(--accent);
+            margin-top: 20px;
+        }
+
+        .range-box {
+            background: var(--glass);
+            padding: 20px 40px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .hint {
+            margin-top: 10px;
+            color: #888;
+            font-weight: 600;
+        }
+
+        #fallback-input {
+            margin-top: 20px;
+            padding: 10px 20px;
+            border-radius: 10px;
+            border: 2px solid var(--primary);
+            background: transparent;
+            color: #fff;
+            font-size: 20px;
+            width: 100px;
+            text-align: center;
+            display: none;
+        }
+
+        .nebula {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background: radial-gradient(circle at 50% 50%, #2a1a2e 0%, #121212 100%);
+            opacity: 0.5;
+        }
+
+        .nebula-pulse {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(156, 39, 176, 0.2) 0%, transparent 70%);
+            border-radius: 50%;
+            animation: orbit 20s infinite linear;
+        }
+
+        @keyframes orbit {
+            from {
+                transform: translate(-50%, -50%) rotate(0deg) translateX(200px);
+            }
+
+            to {
+                transform: translate(-50%, -50%) rotate(360deg) translateX(200px);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="nebula">
+        <div class="nebula-pulse"></div>
+    </div>
+    <header class="premium-header">
+        <a href="../index.html" class="back-btn"><i data-lucide="arrow-left"></i><span>BACK</span></a>
+        <div style="font-weight: 900; font-size: 24px; color: var(--primary);">THE <span
+                style="color: #fff;">ORACLE</span></div>
+        <div style="width: 80px;"></div>
+    </header>
+
+    <div class="game-area">
+        <div class="range-box">
+            <p style="font-size: 18px; opacity: 0.8;">The Oracle has chosen a number between <br> <span
+                    style="font-size: 32px; font-weight: 900; color: #fff;">1 - 100</span></p>
+            <div id="tries" style="font-weight: 800; color: var(--accent); margin-top: 10px;">Tries left: 10</div>
+        </div>
+
+        <div class="heard" id="heard">...</div>
+        <div class="msg" id="msg">Click the mic and say your guess!</div>
+
+        <div class="mic-container" id="mic-btn">
+            <i data-lucide="mic" class="mic-icon"></i>
+        </div>
+
+        <input type="number" id="fallback-input" placeholder="00">
+        <p class="hint" id="hint">Speak clearly into your microphone</p>
+    </div>
+
+    <script>
+        const msgEl = document.getElementById('msg');
+        const heardEl = document.getElementById('heard');
+        const micBtn = document.getElementById('mic-btn');
+        const fallbackInput = document.getElementById('fallback-input');
+        const triesEl = document.getElementById('tries');
+
+        let randomNum = Math.floor(Math.random() * 100) + 1;
+        let tries = 10;
+        let gameActive = true;
+
+        window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+        if (window.SpeechRecognition) {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+
+            micBtn.addEventListener('click', () => {
+                recognition.start();
+                micBtn.classList.add('listening');
+                msgEl.innerText = "I'm listening...";
+            });
+
+            recognition.addEventListener('result', (e) => {
+                const transcript = e.results[0][0].transcript;
+                handleGuess(transcript);
+            });
+
+            recognition.addEventListener('end', () => {
+                micBtn.classList.remove('listening');
+            });
+
+        } else {
+            msgEl.innerText = "Speech Recognition not supported in this browser.";
+            micBtn.style.display = 'none';
+            fallbackInput.style.display = 'inline-block';
+            fallbackInput.addEventListener('change', (e) => handleGuess(e.target.value));
+        }
+
+        function speak(text, sarcastic = true) {
+            // Voice disabled
+        }
+
+        function handleGuess(guess) {
+            if (!gameActive) return;
+            const num = parseInt(guess);
+
+            if (isNaN(num)) {
+                heardEl.innerText = guess;
+                msgEl.innerText = "The Oracle does not understand gibberish.";
+                speak("I don't understand that. Speak clearly or be silent.");
+                return;
+            }
+
+            tries--;
+            triesEl.innerText = "Tries left: " + tries;
+            heardEl.innerText = num;
+
+            if (num === randomNum) {
+                gameActive = false;
+                msgEl.innerText = "SENSATIONAL. YOU HAVE DEFEATED THE ORACLE.";
+                msgEl.style.color = "#4CAF50";
+                micBtn.style.display = 'none';
+                speak("Unbelievable. You actually found it. Perhaps you are the one.");
+                confetti({
+                    particleCount: 150,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+                setTimeout(() => location.reload(), 8000);
+            } else {
+                if (tries <= 0) {
+                    gameActive = false;
+                    msgEl.innerText = "FAILURE. THE NUMBER WAS " + randomNum;
+                    speak("Out of tries. How predictably mortal. The number was " + randomNum);
+                    setTimeout(() => location.reload(), 5000);
+                    return;
+                }
+
+                if (num < randomNum) {
+                    msgEl.innerText = "HIGHER! ⬆️";
+                    msgEl.style.color = "#FF9800";
+                    let diff = randomNum - num;
+                    let tip = diff < 5 ? " (Very Close!)" : (diff < 15 ? " (Warm)" : "");
+                    msgEl.innerText += tip;
+                    const lines = ["Higher. Try to use your brain.", "Too low. Typical.", "Keep climbing.", "The Oracle expects better."];
+                    speak(lines[Math.floor(Math.random() * lines.length)]);
+                } else {
+                    msgEl.innerText = "LOWER! ⬇️";
+                    msgEl.style.color = "#FF5722";
+                    let diff = num - randomNum;
+                    let tip = diff < 5 ? " (Very Close!)" : (diff < 15 ? " (Warm)" : "");
+                    msgEl.innerText += tip;
+                    const lines = ["Lower. You're overshooting.", "Way too high.", "Descent is your only option.", "Gravity is your friend here."];
+                    speak(lines[Math.floor(Math.random() * lines.length)]);
+                }
+            }
+        }
+
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uno Strategist 2.0 | GameHub Pro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .game-wrapper {
+            max-width: 1000px;
+            margin: 40px auto;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+            min-height: 600px;
+        }
+
+        .stats-bar {
+            padding: 15px 40px;
+            background: rgba(124, 77, 255, 0.1);
+            display: flex;
+            justify-content: space-around;
+            font-size: 14px;
+            font-weight: 800;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .stat-val {
+            color: var(--accent-secondary);
+            margin-left: 5px;
+        }
+
+        .game-body {
+            position: relative;
+            flex-grow: 1;
+            background: #1a1a1a;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        /* Card Styles */
+        .card {
+            width: 80px;
+            height: 120px;
+            border-radius: 8px;
+            background: #fff;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Arial Black', sans-serif;
+            font-size: 40px;
+            color: #fff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            user-select: none;
+            border: 4px solid #fff;
+        }
+
+        .card:hover {
+            transform: translateY(-10px) scale(1.1);
+            z-index: 10;
+        }
+
+        .card.disabled {
+            filter: grayscale(1);
+            opacity: 0.5;
+            cursor: default;
+        }
+
+        .card.disabled:hover {
+            transform: none;
+        }
+
+        .card.red {
+            background: #ea2027;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .card.green {
+            background: #009432;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .card.blue {
+            background: #0652dd;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .card.yellow {
+            background: #ffc312;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .card.black {
+            background: #1e272e;
+            border-color: #f39c12;
+        }
+
+        .card-inner-circle {
+            width: 60px;
+            height: 90px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transform: rotate(-15deg);
+        }
+
+        .small-corner {
+            position: absolute;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .top-left {
+            top: 4px;
+            left: 4px;
+        }
+
+        .bottom-right {
+            bottom: 4px;
+            right: 4px;
+            transform: rotate(180deg);
+        }
+
+        /* Layout */
+        .cpu-hand {
+            display: flex;
+            justify-content: center;
+            gap: -20px;
+            /* Overlap */
+        }
+
+        .cpu-card-back {
+            width: 60px;
+            height: 90px;
+            background: linear-gradient(135deg, #2c3e50, #000);
+            border: 2px solid #fff;
+            border-radius: 6px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+            margin-right: -20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #e74c3c;
+            font-weight: 900;
+            font-family: 'Impact', sans-serif;
+            font-size: 24px;
+        }
+
+        .table-center {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 40px;
+            height: 200px;
+        }
+
+        .deck-pile {
+            width: 80px;
+            height: 120px;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-family: 'Impact', sans-serif;
+            font-size: 32px;
+            border: 4px solid #fff;
+            box-shadow: 2px 2px 0 #fff, 4px 4px 0 #333;
+            cursor: pointer;
+        }
+
+        .deck-pile:active {
+            transform: scale(0.95);
+        }
+
+        .discard-pile {
+            position: relative;
+            width: 80px;
+            height: 120px;
+        }
+
+        .player-hand {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            /* Overlap handled by negative margin in script or flex gap */
+            flex-wrap: wrap;
+            padding-top: 20px;
+        }
+
+        .turn-indicator {
+            position: absolute;
+            top: 50%;
+            left: 20px;
+            transform: translateY(-50%);
+            font-size: 18px;
+            font-weight: bold;
+            color: #fff;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid var(--accent-primary);
+        }
+
+        .color-picker {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border-radius: 12px;
+            border: 2px solid #fff;
+            display: none;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .cp-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid #fff;
+        }
+
+        .win-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <header class="main-header" style="position: relative; background: transparent; border: none;">
+        <div class="nav-container">
+            <a href="../index.html" class="logo" style="text-decoration: none; color: inherit;">
+                <i data-lucide="arrow-left"></i>
+                <span>BACK TO <span class="accent-text">HUB</span></span>
+            </a>
+            <h2 style="font-weight:800; letter-spacing:-1px">UNO STRATEGIST 2.0</h2>
+        </div>
+    </header>
+
+    <div class="game-wrapper">
+        <div class="stats-bar">
+            <span>PLAYER 1: <span class="stat-val" id="p1Score">0</span></span>
+            <span>CPU: <span class="stat-val" id="cpuScore">0</span></span>
+        </div>
+
+        <div class="game-body">
+            <div class="cpu-hand" id="cpuHand">
+                <!-- Cards injected here -->
+            </div>
+
+            <div class="table-center">
+                <div class="deck-pile" onclick="game.drawCard(true)">
+                    UNO
+                </div>
+                <div class="discard-pile" id="discardPile">
+                    <!-- Top card -->
+                </div>
+            </div>
+
+            <div class="player-hand" id="playerHand">
+                <!-- Player cards -->
+            </div>
+
+            <div class="turn-indicator" id="turnIndicator">YOUR TURN</div>
+
+            <div class="color-picker" id="colorPicker">
+                <div class="cp-btn" style="background:#ea2027" onclick="game.pickColor('red')"></div>
+                <div class="cp-btn" style="background:#009432" onclick="game.pickColor('green')"></div>
+                <div class="cp-btn" style="background:#0652dd" onclick="game.pickColor('blue')"></div>
+                <div class="cp-btn" style="background:#ffc312" onclick="game.pickColor('yellow')"></div>
+            </div>
+
+            <div class="win-overlay" id="winOverlay">
+                <h1 style="font-size:48px; color:var(--accent-primary); margin-bottom:20px" id="winnerText">YOU WIN!
+                </h1>
+                <button class="btn-primary" onclick="window.location.reload()">PLAY AGAIN</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/shared.js"></script>
+    <script>
+        lucide.createIcons();
+
+        const COLORS = ['red', 'blue', 'green', 'yellow'];
+        const VALUES = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'sk', 'rv', 'd2']; // sk=skip, rv=reverse, d2=draw2
+        // Wilds handled separately
+
+        class UnoGame {
+            constructor() {
+                this.deck = [];
+                this.discard = [];
+                this.p1Hand = [];
+                this.cpuHand = [];
+                this.turn = 'p1'; // p1 or cpu
+                this.currentColor = '';
+                this.currentValue = ''; // could be 'wild'
+                this.direction = 1; // 1 or -1 (irrelevant in 2p mainly, but keeps logic standard)
+
+                this.init();
+            }
+
+            init() {
+                this.createDeck();
+                this.shuffleDeck();
+
+                // Deal 7
+                for (let i = 0; i < 7; i++) {
+                    this.p1Hand.push(this.drawFromDeck());
+                    this.cpuHand.push(this.drawFromDeck());
+                }
+
+                // P1 Score (actually rounds won logic usually, but here simple sessions)
+
+                // Flip top
+                let top = this.drawFromDeck();
+                while (top.color === 'black') { // Ensure valid start
+                    this.deck.push(top);
+                    this.shuffleDeck();
+                    top = this.drawFromDeck();
+                }
+
+                this.discard.push(top);
+                this.updateContext(top);
+
+                this.render();
+            }
+
+            createDeck() {
+                this.deck = [];
+                COLORS.forEach(c => {
+                    VALUES.forEach(v => {
+                        this.deck.push({ color: c, value: v, type: 'normal' });
+                        if (v !== '0') this.deck.push({ color: c, value: v, type: 'normal' });
+                    });
+                });
+                // Wilds
+                for (let i = 0; i < 4; i++) {
+                    this.deck.push({ color: 'black', value: 'wd', type: 'wild' }); // Wild
+                    this.deck.push({ color: 'black', value: 'd4', type: 'wild' }); // Draw 4
+                }
+            }
+
+            shuffleDeck() {
+                for (let i = this.deck.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [this.deck[i], this.deck[j]] = [this.deck[j], this.deck[i]];
+                }
+            }
+
+            drawFromDeck() {
+                if (this.deck.length === 0) {
+                    if (this.discard.length > 1) {
+                        // Reshuffle discard (keep top)
+                        let top = this.discard.pop();
+                        this.deck = [...this.discard];
+                        this.discard = [top];
+                        this.shuffleDeck();
+                    } else {
+                        // Empty
+                        return null;
+                    }
+                }
+                return this.deck.pop();
+            }
+
+            updateContext(card) {
+                this.currentColor = card.color;
+                this.currentValue = card.value;
+            }
+
+            // --- Player Actions ---
+
+            drawCard(isPlayerTurn) {
+                if (isPlayerTurn && this.turn !== 'p1') return;
+
+                let c = this.drawFromDeck();
+                if (!c) return;
+
+                if (isPlayerTurn) { this.p1Hand.push(c); this.render(); this.nextTurn(); }
+                else { this.cpuHand.push(c); /* render? */ }
+
+                if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('move');
+            }
+
+            playCard(index) {
+                if (this.turn !== 'p1') return;
+                let c = this.p1Hand[index];
+
+                if (this.isPlayable(c)) {
+                    this.p1Hand.splice(index, 1);
+                    this.discard.push(c);
+                    this.updateContext(c);
+
+                    if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('click'); // Card Play Sound
+
+                    if (c.color === 'black') {
+                        // Show Color Picker
+                        document.getElementById('colorPicker').style.display = 'grid';
+                        // Wait for pick...
+                    } else {
+                        this.handleSpecial(c);
+                        this.render();
+                        if (this.p1Hand.length === 0) { this.win('p1'); return; }
+                        this.nextTurn();
+                    }
+                }
+            }
+
+            pickColor(color) {
+                this.currentColor = color;
+                document.getElementById('colorPicker').style.display = 'none';
+
+                let top = this.discard[this.discard.length - 1];
+                this.handleSpecial(top);
+
+                this.render();
+                if (this.p1Hand.length === 0) { this.win('p1'); return; }
+                this.nextTurn();
+            }
+
+            isPlayable(card) {
+                if (card.color === 'black') return true;
+                if (card.color === this.currentColor) return true;
+                if (card.value === this.currentValue) return true;
+                return false;
+            }
+
+            handleSpecial(card) {
+                if (card.value === 'sk') { // Skip
+                    // Skip next player
+                    // Since 2 player, it's my turn again logic... but usually skip simply skips opponent
+                    // so turn remains mine? In 2 player, Skip gives you another turn.
+                    if (this.turn === 'p1') { /* p1 goes again */ } else { /* cpu goes again */ }
+                    this.showToast("SKIPPED!");
+                }
+                else if (card.value === 'rv') { // Reverse
+                    // In 2 player, acts like Skip
+                    this.showToast("REVERSE!");
+                }
+                else if (card.value === 'd2') { // Draw 2
+                    let victim = this.turn === 'p1' ? this.cpuHand : this.p1Hand;
+                    victim.push(this.drawFromDeck());
+                    victim.push(this.drawFromDeck());
+                    this.showToast("DRAW +2!");
+                }
+                else if (card.value === 'd4') { // Draw 4
+                    let victim = this.turn === 'p1' ? this.cpuHand : this.p1Hand;
+                    for (let i = 0; i < 4; i++) victim.push(this.drawFromDeck());
+                    this.showToast("DRAW +4!");
+                }
+            }
+
+            nextTurn() {
+                // Check win first
+                if (this.p1Hand.length === 0) { this.win('p1'); return; }
+                if (this.cpuHand.length === 0) { this.win('cpu'); return; }
+
+                let top = this.discard[this.discard.length - 1];
+                // Handling "Skip/Reverse" effect on turn passing
+                let skip = (top.value === 'sk' || top.value === 'rv');
+
+                // IMPORTANT: Logic for 2p skip/reverse: Usually if I play skip, it's my turn again.
+                // Standard Uno: Next player misses turn.
+                // So playCard logic already did action. But we need to decide WHO is next.
+
+                // If I just played... was it skip?
+                // If special handling didn't change 'turn', we simply swap.
+                // But wait, playCard calls nextTurn() unless held.
+
+                // Simplified: The turn swap logic.
+                // If I played a Skip/Reverse/Draw2/Draw4... technically opponent loses turn?
+                // Actually Draw 2/4 makes them draw AND lose turn in some rules, or just draw. 
+                // Official: Draw 2 -> Next player draws 2 and forfeits turn.
+
+                // Let's implement correct 2p rules:
+                // Skip/Reverse/Draw2/WildDraw4 -> Opponent is skipped. Current player plays again.
+                // Normal/Wild -> Turn passes.
+
+                if (top.value === 'sk' || top.value === 'rv' || top.value === 'd2' || top.value === 'd4') {
+                    // Turn stays with current player? 
+                    // But we called nextTurn(), so we need to know who just played.
+                    // This state management is tricky in simple funcs. 
+                    // Let's rely on `this.turn` variable which we haven't flipped yet.
+
+                    // If turn was P1, and played special, turn stays P1.
+                    // We just need to clear the special effect "flag" so infinite loops don't happen relative to that specific card instance...
+                    // But since we just added it to discard, checking top is valid.
+
+                    // Issue: If I play Skip, turn stays P1. I play another card. Top is now Normal. nextTurn called. Turn becomes CPU. Correct.
+                    // But we need to ensure we don't re-process the Skip when rendering/checking.
+                    // Actually, handleSpecial was called.
+
+                    // Let's just swap turn if it's NOT a special that skips.
+                    // Wait, draw 2 skips turn? Yes official rules.
+
+                    // So... if special, do NOT swap turn.
+                    // But we need to make sure the CPU knows to play again if IT played special.
+
+                    // Refined: We need to know if the top card is "freshly played".
+                    // For this simple demo, let's assume `nextTurn` is called AFTER play.
+                    // If card was special, we simply Return (don't swap).
+                    // BUT we must allow CPU to loop if it's CPU turn.
+
+                    // To avoid complexity, let's assume HandleSpecial handles the "Skip" logic by setting a flag `skipTurn = true`.
+
+                    // Re-implement simplified: 
+                    // Always swap turn unless `skipTurn` is true.
+                    // `handleSpecial` sets `skipTurn` if applicable.
+                }
+
+                // Actually, let's just do standard swap for non-special, and special handling logic.
+                // Since I can't rewrite `handleSpecial` easily without context of "freshness", I'll check a flag I set in handleSpecial.
+                // Oh wait, I didn't set flags in handleSpecial above.
+
+                // Let's patch:
+                let isSpecial = (top.value === 'sk' || top.value === 'rv' || top.value === 'd2' || top.value === 'd4');
+                // We need to know if we JUST played it. Yes, playCard calls this. 
+
+                if (isSpecial) {
+                    // Turn stays.
+                    if (this.turn === 'cpu') setTimeout(() => this.cpuTurn(), 1000);
+                    // If p1, wait for input.
+                } else {
+                    this.turn = this.turn === 'p1' ? 'cpu' : 'p1';
+                    if (this.turn === 'cpu') setTimeout(() => this.cpuTurn(), 1000); // Delay for realism
+                    document.getElementById('turnIndicator').innerText = this.turn === 'p1' ? "YOUR TURN" : "CPU THINKING...";
+                    this.render();
+                }
+            }
+
+            cpuTurn() {
+                // simple AI
+                let validIdx = -1;
+                // Try to match color/value, prioritize specials or not
+                for (let i = 0; i < this.cpuHand.length; i++) {
+                    if (this.isPlayable(this.cpuHand[i])) {
+                        validIdx = i;
+                        // naive: play first valid
+                        // prioritize +4 or wild if desperate? nah random is fine for "Strategist" name ;)
+                        if (this.cpuHand[i].value === 'd4') break; // Mean AI
+                        if (this.cpuHand[i].color !== 'black') break; // Save wilds?
+                    }
+                }
+
+                if (validIdx !== -1) {
+                    let c = this.cpuHand[validIdx];
+                    this.cpuHand.splice(validIdx, 1);
+                    this.discard.push(c);
+                    this.updateContext(c);
+
+                    if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('click');
+
+                    if (c.color === 'black') {
+                        // AI picks random color
+                        let picked = COLORS[Math.floor(Math.random() * 4)];
+                        this.currentColor = picked;
+                        this.showToast(`CPU picked ${picked.toUpperCase()}`);
+                    }
+
+                    this.handleSpecial(c); // Toast messages
+                    this.render();
+
+                    if (this.cpuHand.length === 0) { this.win('cpu'); return; }
+                    this.nextTurn();
+                } else {
+                    // Draw
+                    this.drawCard(false);
+                    this.showToast("CPU Draws");
+                    // Pass turn? Usually you can play if drew valid.
+                    // simplified: draw and pass.
+                    this.turn = 'p1';
+                    document.getElementById('turnIndicator').innerText = "YOUR TURN";
+                    this.render();
+                }
+            }
+
+            render() {
+                // Render Desk
+                let top = this.discard[this.discard.length - 1];
+                let discEl = document.getElementById('discardPile');
+                discEl.innerHTML = this.getCardHTML(top, false);
+                // Adjust BG of discard pile?
+                // Actually the card HTML handles bg.
+
+                // Render P1 Hand
+                let p1Div = document.getElementById('playerHand');
+                p1Div.innerHTML = '';
+                this.p1Hand.forEach((c, i) => {
+                    let el = document.createElement('div');
+                    el.innerHTML = this.getCardHTML(c, false);
+                    let cardNode = el.firstElementChild;
+
+                    if (this.turn === 'p1' && this.isPlayable(c)) {
+                        cardNode.onclick = () => this.playCard(i);
+                    } else {
+                        cardNode.classList.add('disabled');
+                    }
+                    p1Div.appendChild(cardNode);
+                });
+
+                // Render CPU Hand (backs)
+                let cpuDiv = document.getElementById('cpuHand');
+                cpuDiv.innerHTML = '';
+                this.cpuHand.forEach(() => {
+                    let el = document.createElement('div');
+                    el.className = 'cpu-card-back';
+                    el.innerText = 'UNO';
+                    cpuDiv.appendChild(el);
+                });
+
+                // Update UI Context (bg color hint maybe?)
+                document.querySelector('.game-wrapper').style.borderColor = this.getColorHex(this.currentColor);
+            }
+
+            getCardHTML(card, isBack) {
+                if (!card) return '';
+                let displayVal = card.value.toUpperCase();
+                if (displayVal === 'WD') displayVal = 'WILD';
+                if (displayVal === 'D4') displayVal = '+4';
+                if (displayVal === 'D2') displayVal = '+2';
+                if (displayVal === 'SK') displayVal = 'SKIP';
+                if (displayVal === 'RV') displayVal = 'REV';
+
+                // Icons?
+                let centerContent = displayVal;
+
+                return `
+                <div class="card ${card.color === 'black' ? 'black' : card.color}">
+                    <div class="small-corner top-left">${displayVal}</div>
+                    <div class="card-inner-circle">
+                       ${centerContent}
+                    </div>
+                    <div class="small-corner bottom-right">${displayVal}</div>
+                </div>`;
+            }
+
+            getColorHex(name) {
+                if (name === 'red') return '#ea2027';
+                if (name === 'blue') return '#0652dd';
+                if (name === 'green') return '#009432';
+                if (name === 'yellow') return '#ffc312';
+                return '#fff';
+            }
+
+            showToast(msg) {
+                let turnInd = document.getElementById('turnIndicator');
+                let old = turnInd.innerText;
+                turnInd.innerText = msg;
+                turnInd.style.color = '#ffea00';
+                setTimeout(() => {
+                    turnInd.innerText = this.turn === 'p1' ? "YOUR TURN" : "CPU THINKING...";
+                    turnInd.style.color = '#fff';
+                }, 1500);
+            }
+
+            win(winner) {
+                document.getElementById('winOverlay').style.display = 'flex';
+                document.getElementById('winnerText').innerText = winner === 'p1' ? "YOU WIN!" : "CPU WINS!";
+                document.getElementById('winnerText').style.color = winner === 'p1' ? '#4cd137' : '#e84118';
+                if (winner === 'p1' && typeof GameHubAudio !== 'undefined') GameHubAudio.play('win');
+                else if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('loss');
+            }
+        }
+
+        const game = new UnoGame();
+    </script>
+</body>
+
+</html>

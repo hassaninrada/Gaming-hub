@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Football Pro Elite - Penalty Shootout</title>
+    <link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Teko', sans-serif;
+            overflow: hidden;
+            background: #000;
+        }
+
+        #gameCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        #ui-layer {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        /* --- SCOREBOARD --- */
+        .scoreboard-advanced {
+            position: absolute;
+            top: 40px;
+            left: 50px;
+            width: 330px;
+            background: rgba(10, 10, 15, 0.95);
+            border: 2px solid #444;
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+            pointer-events: auto;
+        }
+
+        .top-row {
+            display: flex;
+            height: 110px;
+            margin-bottom: 12px;
+        }
+
+        .target-box {
+            flex: 1.4;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding-left: 10px;
+        }
+
+        .lbl-target {
+            color: #FFEA00;
+            font-size: 36px;
+            font-style: italic;
+            font-weight: 800;
+            line-height: 0.8;
+        }
+
+        .val-target {
+            color: #fff;
+            font-size: 76px;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .red-visual {
+            flex: 1;
+            border: 2.5px solid #e74c3c;
+            border-radius: 6px;
+            margin: 8px;
+            background: rgba(231, 76, 60, 0.05);
+            box-shadow: inset 0 0 10px rgba(231, 76, 60, 0.2);
+        }
+
+        .stat-row {
+            background: linear-gradient(90deg, #111, #222);
+            border: 1px solid #333;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            padding: 8px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 30px;
+            font-weight: 700;
+            color: #fff;
+            text-transform: uppercase;
+        }
+
+        .balls-row {
+            display: flex;
+            gap: 8px;
+        }
+
+        .mini-ball {
+            width: 24px;
+            height: 24px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+            transition: 0.3s;
+        }
+
+        .mini-ball.dead {
+            opacity: 0.1;
+            transform: scale(0.8);
+        }
+
+        /* --- THE ACCURACY GAUGE --- */
+        .gauge-v9 {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 450px;
+            height: 100%;
+        }
+
+        .arc-dash {
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+        }
+
+        .dash-line {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.8);
+            stroke-width: 12;
+            stroke-dasharray: 40, 20;
+            stroke-linecap: round;
+        }
+
+        .gauge-num {
+            fill: #fff;
+            font-size: 64px;
+            font-weight: 900;
+            text-anchor: middle;
+            text-shadow: 2px 2px 10px #000;
+        }
+
+        .cursor-glow {
+            fill: #FFEA00;
+            filter: drop-shadow(0 0 15px orange);
+        }
+
+        /* --- MESSAGES --- */
+        .pop-msg {
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 160px;
+            font-weight: 950;
+            font-style: italic;
+            color: #FFEA00;
+            text-shadow: 8px 8px 0px #000, 0 0 40px rgba(255, 234, 0, 0.5);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .pop-msg.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.1) rotate(-5deg);
+        }
+
+        /* --- OVERLAY MENU --- */
+        #menu-box {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(0, 10, 40, 0.9), rgba(0, 0, 0, 0.95));
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .btn-start {
+            background: linear-gradient(to bottom, #FFEA00, #ffca00);
+            border: 6px solid #fff;
+            border-radius: 80px;
+            padding: 20px 80px;
+            font-size: 64px;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 12px 40px rgba(255, 234, 0, 0.3);
+            text-transform: uppercase;
+            font-family: 'Teko', sans-serif;
+            transition: 0.3s;
+        }
+
+        .btn-start:hover {
+            transform: scale(1.1);
+            filter: brightness(1.2);
+        }
+
+        /* TRANSPARENCY FILTER */
+        #svg-filters {
+            height: 0;
+            width: 0;
+            position: absolute;
+        }
+    </style>
+</head>
+
+<body>
+
+    <svg id="svg-filters">
+        <filter id="clean-vibrant">
+            <feColorMatrix type="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 -1 -1 -1 3.5 -2.2" result="mask" />
+            <feColorMatrix in="mask" type="matrix" values="1.2 0 0 0 0 0 1.2 0 0 0 0 0 1.2 0 0 0 0 0 1.5 0" />
+        </filter>
+    </svg>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="ui-layer">
+        <div class="scoreboard-advanced">
+            <div class="top-row">
+                <div class="target-box">
+                    <div class="lbl-target">TARGET</div>
+                    <div class="val-target">10</div>
+                </div>
+                <div class="red-visual"></div>
+            </div>
+
+            <div class="stat-row">
+                <span>GOALS : <span id="s-goals" style="color:#FFEA00">0</span></span>
+            </div>
+            <div class="stat-row">
+                <span>REMAINING :</span>
+                <div class="balls-row" id="s-balls">
+                    <div class="mini-ball"></div>
+                    <div class="mini-ball"></div>
+                    <div class="mini-ball"></div>
+                    <div class="mini-ball"></div>
+                    <div class="mini-ball"></div>
+                </div>
+            </div>
+            <div class="stat-row">
+                <span>STREAK : <span id="s-streak">0</span></span>
+            </div>
+        </div>
+
+        <div class="gauge-v9">
+            <svg class="arc-dash" viewBox="0 0 500 1000">
+                <path id="gaugePath" class="dash-line" d="M 500,50 Q 150,500 500,950" />
+                <text x="390" y="110" class="gauge-num" transform="rotate(-15, 390, 110)">6</text>
+                <text x="300" y="270" class="gauge-num" transform="rotate(-10, 300, 270)">4</text>
+                <text x="240" y="440" class="gauge-num">3</text>
+                <text x="240" y="580" class="gauge-num">5</text>
+                <text x="300" y="750" class="gauge-num" transform="rotate(10, 300, 750)">4</text>
+                <text x="390" y="910" class="gauge-num" transform="rotate(15, 390, 910)">3</text>
+                <circle id="gaugeMark" cx="0" cy="0" r="26" class="cursor-glow" />
+            </svg>
+        </div>
+
+        <div class="pop-msg" id="msg-pop">GOAL!</div>
+    </div>
+
+    <div id="menu-box">
+        <h1
+            style="color:white; font-size:120px; font-weight:900; font-style:italic; margin-bottom:50px; text-shadow: 0 0 30px #FFEA00;">
+            FOOTBALL PRO</h1>
+        <button class="btn-start" onclick="startGame()">PLAY MATCH</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const assets = {
+            bg: new Image(),
+            player: new Image(),
+            gk: new Image()
+        };
+        assets.bg.src = 'https://images.unsplash.com/photo-1510566337590-2fc1f21d0faa?q=80&w=1200'; // Dark stadium
+        // Using the high-quality generated football player
+        assets.player.src = 'C:/Users/Lenovo-pc/.gemini/antigravity/brain/557defea-6dee-424e-8313-a6b1f94d67de/football_player_kicking_1768677725124.png';
+        assets.gk.src = 'https://images.unsplash.com/photo-1543351611-58f69d7c1781?q=80&w=400'; // GK asset
+
+        let state = 'menu';
+        let stats = { goals: 0, balls: 5, streak: 0, target: 10 };
+        let ball = { x: 0, y: 0, z: 0, active: false, vx: 0, vy: 0, vz: 0, trail: [] };
+        let gk = { x: 0, y: 0, tX: 0, tY: 0, state: 'idle', diveProgress: 0 };
+        let shake = 0;
+        let particles = [];
+
+        function init() {
+            window.addEventListener('resize', resize);
+            resize();
+            window.addEventListener('mousedown', shoot);
+            window.addEventListener('touchstart', shoot);
+            requestAnimationFrame(loop);
+        }
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        function startGame() {
+            document.getElementById('menu-box').style.display = 'none';
+            stats.goals = 0; stats.balls = 5; stats.streak = 0;
+            updateUI();
+            resetShoot();
+        }
+
+        function resetShoot() {
+            if (stats.balls <= 0) {
+                document.getElementById('menu-box').style.display = 'flex';
+                state = 'menu';
+                return;
+            }
+            state = 'ready';
+            ball.active = false;
+            ball.trail = [];
+            ball.x = 0; ball.y = 0.5; ball.z = 20;
+            gk.state = 'idle'; gk.tX = 0; gk.tY = 0; gk.diveProgress = 0;
+        }
+
+        function loop() {
+            update();
+            render();
+            requestAnimationFrame(loop);
+        }
+
+        function createSparks(x, y, c) {
+            for (let i = 0; i < 15; i++) {
+                particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 12,
+                    vy: (Math.random() - 0.5) * 12,
+                    life: 1,
+                    color: c
+                });
+            }
+        }
+
+        function update() {
+            if (state === 'menu') return;
+
+            if (ball.active) {
+                ball.trail.push({ x: ball.x, y: ball.y, z: ball.z });
+                if (ball.trail.length > 10) ball.trail.shift();
+
+                ball.x += ball.vx; ball.y += ball.vy; ball.z += ball.vz;
+                ball.vy -= 0.005; // Light gravity
+                if (ball.y < 0) { ball.y = 0; ball.vy = -ball.vy * 0.4; }
+
+                // GK AI
+                if (ball.z > 60 && gk.state === 'idle') {
+                    gk.state = 'diving';
+                    gk.tX = ball.x * 12; // Dive multiplier
+                    gk.tY = ball.y * 60;
+                }
+
+                // Goal check
+                if (ball.z > 100) {
+                    ball.active = false;
+                    const inGoal = Math.abs(ball.x) < 2.0 && ball.y < 1.5;
+                    const caught = Math.abs(ball.x * 12 - gk.x) < 30 && Math.abs(ball.y * 60 - gk.y) < 40;
+
+                    if (inGoal && !caught) {
+                        outcome('GOAL!', 1);
+                        shake = 25;
+                        createSparks(project(ball.x, ball.y, 100).x, project(ball.x, ball.y, 100).y, '#FFEA00');
+                    } else if (caught) {
+                        outcome('SAVED!', 0);
+                    } else {
+                        outcome('MISS!', 0);
+                    }
+                }
+            }
+
+            // GK Dive smoothing
+            if (gk.state === 'diving') {
+                gk.x += (gk.tX - gk.x) * 0.15;
+                gk.y += (gk.tY - gk.y) * 0.15;
+            } else {
+                gk.x *= 0.9; gk.y *= 0.9;
+            }
+
+            // Particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx; p.y += p.vy; p.life -= 0.025;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            if (shake > 0) shake *= 0.9;
+
+            // Gauge
+            const p = document.getElementById('gaugePath');
+            if (p) {
+                const len = p.getTotalLength();
+                const perc = (Math.sin(Date.now() * 0.0075) + 1) / 2;
+                const pos = p.getPointAtLength(perc * len);
+                const mark = document.getElementById('gaugeMark');
+                mark.setAttribute('cx', pos.x); mark.setAttribute('cy', pos.y);
+            }
+        }
+
+        function shoot() {
+            if (state !== 'ready') return;
+            state = 'shooting';
+            ball.active = true;
+
+            const p = document.getElementById('gaugePath');
+            const perc = (Math.sin(Date.now() * 0.0075) + 1) / 2;
+
+            ball.vz = 2.8;
+            ball.vx = (perc - 0.5) * 0.18; // Aim
+            ball.vy = 0.16 + (Math.random() * 0.05); // Loft
+        }
+
+        function outcome(txt, g) {
+            const el = document.getElementById('msg-pop');
+            el.innerText = txt; el.classList.add('show');
+            if (g > 0) { stats.goals++; stats.streak++; }
+            else { stats.streak = 0; }
+            stats.balls--;
+            updateUI();
+            setTimeout(() => {
+                el.classList.remove('show');
+                resetShoot();
+            }, 2000);
+        }
+
+        function updateUI() {
+            document.getElementById('s-goals').innerText = stats.goals;
+            document.getElementById('s-streak').innerText = stats.streak;
+            const icons = document.getElementById('s-balls').children;
+            for (let i = 0; i < icons.length; i++) {
+                if (i < stats.balls) icons[i].classList.remove('dead');
+                else icons[i].classList.add('dead');
+            }
+        }
+
+        function project(x, y, z) {
+            const focal = 1000;
+            const f = focal / (focal + (100 - z) * 12);
+            return {
+                x: (canvas.width / 2) + x * 220 * f,
+                y: (canvas.height * 0.8) - y * 180 * f - (z * 1.5 * f),
+                s: f
+            };
+        }
+
+        function render() {
+            ctx.save();
+            if (shake > 0.5) ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Background
+            if (assets.bg.complete) {
+                ctx.drawImage(assets.bg, 0, 0, canvas.width, canvas.height);
+            }
+
+            const cx = canvas.width / 2;
+
+            // DRAW GOAL (3D)
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 12;
+            ctx.lineJoin = 'round';
+            const gL = project(-2.2, 1.6, 100);
+            const gR = project(2.2, 1.6, 100);
+            const gBL = project(-2.2, 0, 100);
+            const gBR = project(2.2, 0, 100);
+
+            // Goal frame
+            ctx.beginPath();
+            ctx.moveTo(gBL.x, gBL.y);
+            ctx.lineTo(gL.x, gL.y);
+            ctx.lineTo(gR.x, gR.y);
+            ctx.lineTo(gBR.x, gBR.y);
+            ctx.stroke();
+
+            // Net pattern
+            ctx.strokeStyle = 'rgba(255,255,255,0.2)';
+            ctx.lineWidth = 2;
+            for (let i = 1; i < 10; i++) {
+                ctx.beginPath();
+                ctx.moveTo(gL.x + (gR.x - gL.x) * i / 10, gL.y);
+                ctx.lineTo(gBL.x + (gBR.x - gBL.x) * i / 10, gBL.y);
+                ctx.stroke();
+            }
+
+            // GOALKEEPER (Glow and Shape)
+            const gkp = project(gk.x / 100, 0.8 + (gk.y / 200), 98);
+            ctx.fillStyle = '#0f0'; // Neon Green GK highlight
+            ctx.shadowBlur = 25; ctx.shadowColor = '#0f0';
+            ctx.beginPath();
+            ctx.ellipse(gkp.x, gkp.y, 45 * gkp.s, 60 * gkp.s, (gk.x / 50), 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // PLAYER (THE ASSET)
+            if (assets.player.complete) {
+                const pW = canvas.width * 0.28;
+                const pH = pW * 1.0;
+                const pX = cx - pW * 0.6;
+                const pY = canvas.height * 0.6;
+
+                ctx.save();
+                ctx.filter = 'url(#clean-vibrant)';
+                // Simple animation for player scaling on shoot
+                if (state === 'shooting' || state === 'hit') {
+                    ctx.translate(pX + pW / 2, pY + pH);
+                    ctx.scale(1.05, 1.05);
+                    ctx.translate(-(pX + pW / 2), -(pY + pH));
+                }
+                ctx.drawImage(assets.player, pX, pY, pW, pH);
+                ctx.restore();
+            }
+
+            // PARTICLES
+            particles.forEach(p => {
+                ctx.globalAlpha = p.life;
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, 6, 6);
+            });
+            ctx.globalAlpha = 1.0;
+
+            // BALL
+            if (ball.active || state === 'ready') {
+                const b = project(ball.x, ball.y, ball.z);
+
+                // Trail
+                ctx.strokeStyle = 'rgba(255,255,255,0.4)';
+                ctx.lineWidth = 20 * b.s;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ball.trail.forEach((t, i) => {
+                    const tp = project(t.x, t.y, t.z);
+                    if (i === 0) ctx.moveTo(tp.x, tp.y);
+                    else ctx.lineTo(tp.x, tp.y);
+                });
+                ctx.stroke();
+
+                // Ball Shape
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(b.x, b.y, 32 * b.s, 0, Math.PI * 2);
+                ctx.fill();
+                // Ball lines
+                ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.moveTo(b.x - 20 * b.s, b.y); ctx.lineTo(b.x + 20 * b.s, b.y); ctx.stroke();
+            }
+
+            ctx.restore();
+        }
+
+        init();
+    </script>
+</body>
+
+</html>

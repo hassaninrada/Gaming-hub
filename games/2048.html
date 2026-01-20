@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Number Grid 2048 | GameHub Pro</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .game-wrapper {
+            max-width: 500px;
+            margin: 40px auto;
+            background: var(--card-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(20px);
+            user-select: none;
+        }
+
+        .stats-bar {
+            padding: 15px 40px;
+            background: rgba(124, 77, 255, 0.1);
+            display: flex;
+            justify-content: space-around;
+            font-size: 14px;
+            font-weight: 800;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .stat-val {
+            color: var(--accent-secondary);
+            margin-left: 5px;
+            font-size: 18px;
+        }
+
+        .game-body {
+            background: #1e1e2e;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+        }
+
+        #grid {
+            width: 400px;
+            height: 400px;
+            background: #222230;
+            border-radius: 8px;
+            position: relative;
+            padding: 10px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 10px;
+        }
+
+        .cell-bg {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        .tile {
+            position: absolute;
+            width: 85px;
+            height: 85px;
+            background: #3e3e4e;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: bold;
+            color: #fff;
+            transition: all 0.15s ease-in-out;
+            animation: pop 0.2s;
+        }
+
+        .t2 {
+            background: #eee4da;
+            color: #776e65;
+        }
+
+        .t4 {
+            background: #ede0c8;
+            color: #776e65;
+        }
+
+        .t8 {
+            background: #f2b179;
+            color: #f9f6f2;
+        }
+
+        .t16 {
+            background: #f59563;
+            color: #f9f6f2;
+        }
+
+        .t32 {
+            background: #f67c5f;
+            color: #f9f6f2;
+        }
+
+        .t64 {
+            background: #f65e3b;
+            color: #f9f6f2;
+        }
+
+        .t128 {
+            background: #edcf72;
+            color: #f9f6f2;
+            font-size: 28px;
+            box-shadow: 0 0 10px #edcf72;
+        }
+
+        .t256 {
+            background: #edcc61;
+            color: #f9f6f2;
+            font-size: 28px;
+            box-shadow: 0 0 15px #edcc61;
+        }
+
+        .t512 {
+            background: #edc850;
+            color: #f9f6f2;
+            font-size: 28px;
+            box-shadow: 0 0 20px #edc850;
+        }
+
+        .t1024 {
+            background: #edc53f;
+            color: #f9f6f2;
+            font-size: 24px;
+            box-shadow: 0 0 25px #edc53f;
+        }
+
+        .t2048 {
+            background: #edc22e;
+            color: #f9f6f2;
+            font-size: 24px;
+            box-shadow: 0 0 30px #edc22e;
+        }
+
+        @keyframes pop {
+            0% {
+                transform: scale(0);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <div class="bg-glow-container">
+        <div class="glow-sphere sphere-1"></div>
+        <div class="glow-sphere sphere-2"></div>
+    </div>
+
+    <header class="main-header" style="position: relative; background: transparent; border: none;">
+        <div class="nav-container">
+            <a href="../index.html" class="logo" style="text-decoration: none; color: inherit;">
+                <i data-lucide="arrow-left"></i>
+                <span>BACK TO <span class="accent-text">HUB</span></span>
+            </a>
+            <h2 style="font-weight:800; letter-spacing:-1px">NUMBER GRID 2048</h2>
+        </div>
+    </header>
+
+    <div class="game-wrapper">
+        <div class="stats-bar">
+            <span>SCORE: <span class="stat-val" id="score">0</span></span>
+            <span>BEST: <span class="stat-val" id="best">0</span></span>
+        </div>
+
+        <div class="game-body">
+            <div id="grid">
+                <!-- 16 bg cells -->
+                <div class="cell-bg"></div>
+                <div class="cell-bg"></div>
+                <div class="cell-bg"></div>
+                <div class="cell-bg"></div>
+                <div class="cell-bg"></div>
+                <div class="cell-bg"></div>
+                <div class="cell-bg"></div>
+                <div class="cell-bg"></div>
+                <div class="cell-bg"></div>
+                <div class="cell-bg"></div>
+                <div class="cell-bg"></div>
+                <div class="cell-bg"></div>
+                <div class="cell-bg"></div>
+                <div class="cell-bg"></div>
+                <div class="cell-bg"></div>
+                <div class="cell-bg"></div>
+                <!-- Tiles injected here -->
+            </div>
+
+            <div class="overlay" id="gameOver">
+                <h1 style="font-size:48px; color:#fff; margin-bottom:20px">GAME OVER</h1>
+                <button class="btn-primary" onclick="resetGame()">TRY AGAIN</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/shared.js"></script>
+    <script>
+        lucide.createIcons();
+
+        let grid = Array(4).fill().map(() => Array(4).fill(0));
+        let score = 0;
+        let best = localStorage.getItem('2048_best') || 0;
+        document.getElementById('best').innerText = best;
+
+        const gridEl = document.getElementById('grid');
+
+        function resetGame() {
+            grid = Array(4).fill().map(() => Array(4).fill(0));
+            score = 0;
+            updateScore(0);
+            document.getElementById('gameOver').style.display = 'none';
+            // Clear tiles
+            const tiles = document.querySelectorAll('.tile');
+            tiles.forEach(t => t.remove());
+
+            addRandomTile();
+            addRandomTile();
+            render();
+        }
+
+        function updateScore(add) {
+            score += add;
+            document.getElementById('score').innerText = score;
+            if (score > best) {
+                best = score;
+                localStorage.setItem('2048_best', best);
+                document.getElementById('best').innerText = best;
+            }
+        }
+
+        function addRandomTile() {
+            let empty = [];
+            for (let r = 0; r < 4; r++)
+                for (let c = 0; c < 4; c++)
+                    if (grid[r][c] === 0) empty.push({ r, c });
+
+            if (empty.length > 0) {
+                let cell = empty[Math.floor(Math.random() * empty.length)];
+                grid[cell.r][cell.c] = Math.random() < 0.9 ? 2 : 4;
+            }
+        }
+
+        function getTilePos(r, c) {
+            return { top: 10 + r * (85 + 10), left: 10 + c * (85 + 10) };
+        }
+
+        function render() {
+            // Remove old (not ideal for animation but functional for MVP)
+            // Ideally we track tile IDs to animate movement.
+            // For MVP 2.0, we just redraw.
+            const existing = Array.from(document.querySelectorAll('.tile'));
+            existing.forEach(e => e.remove());
+
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 4; c++) {
+                    if (grid[r][c] !== 0) {
+                        let t = document.createElement('div');
+                        t.className = `tile t${grid[r][c]}`;
+                        if (grid[r][c] > 2048) t.classList.add('t2048');
+                        t.innerText = grid[r][c];
+                        let pos = getTilePos(r, c);
+                        t.style.top = pos.top + 'px';
+                        t.style.left = pos.left + 'px';
+                        gridEl.appendChild(t);
+                    }
+                }
+            }
+        }
+
+        function slide(row) {
+            let arr = row.filter(val => val);
+            let missing = 4 - arr.length;
+            let zeros = Array(missing).fill(0);
+            arr = arr.concat(zeros);
+            return arr;
+        }
+
+        function combine(row) {
+            for (let i = 0; i < 3; i++) {
+                if (row[i] !== 0 && row[i] === row[i + 1]) {
+                    row[i] *= 2;
+                    row[i + 1] = 0;
+                    updateScore(row[i]);
+                    // Animation trigger?
+                }
+            }
+            return row;
+        }
+
+        function move(dir) {
+            let flipped = false;
+            let rotated = false;
+            let played = true;
+
+            // Normalize to LEFT slide
+            // 0: Left, 1: Up, 2: Right, 3: Down
+
+            if (dir === 1) { // Up (Rotate Anti-Clockwise)
+                grid = rotateLeft(grid); rotated = true;
+            } else if (dir === 2) { // Right (Reverse)
+                grid = reverse(grid); flipped = true;
+            } else if (dir === 3) { // Down (Rotate Clockwise -> Left 3 times or Rotate Left + Reverse?)
+                // Down = Rotate Left + Reverse (col becomes row reversed?)
+                // Actually easier: Rotate Left -> Left -> Left? 
+                grid = rotateLeft(grid); // now Left is Up
+                grid = rotateLeft(grid); // now Left is Right
+                grid = rotateLeft(grid); // now Left is Down
+                rotated = true;
+                // Wait logic check
+            }
+
+            // Logic check: Up is actually turning grid so top is left.
+            // visual: 
+            // 1 2   rotL  2 4
+            // 3 4         1 3
+            // slide left: 2 4 -> 2 4 (no change).
+
+            let past = JSON.stringify(grid);
+
+            for (let r = 0; r < 4; r++) {
+                grid[r] = slide(grid[r]);
+                grid[r] = combine(grid[r]);
+                grid[r] = slide(grid[r]);
+            }
+
+            let changed = JSON.stringify(grid) !== past;
+
+            // Revert transforms
+            if (dir === 1) { // Undo Up (Rotate Right)
+                grid = rotateRight(grid);
+            } else if (dir === 2) { // Undo Right (Reverse)
+                grid = reverse(grid);
+            } else if (dir === 3) { // Undo Down
+                grid = rotateRight(grid);
+                grid = rotateRight(grid);
+                grid = rotateRight(grid);
+            }
+
+            if (changed) {
+                addRandomTile();
+                render();
+                if (isGameOver()) {
+                    document.getElementById('gameOver').style.display = 'flex';
+                }
+                if (typeof GameHubAudio !== 'undefined') GameHubAudio.play('move');
+            }
+        }
+
+        function reverse(g) { return g.map(row => row.slice().reverse()); }
+
+        function rotateLeft(g) {
+            let newG = Array(4).fill().map(() => Array(4).fill(0));
+            // 90 deg anti-clockwise
+            // (0,0) -> (3,0)
+            // (0,3) -> (0,0)
+            for (let r = 0; r < 4; r++)
+                for (let c = 0; c < 4; c++)
+                    newG[3 - c][r] = g[r][c];
+            return newG;
+        }
+
+        function rotateRight(g) {
+            let newG = Array(4).fill().map(() => Array(4).fill(0));
+            for (let r = 0; r < 4; r++)
+                for (let c = 0; c < 4; c++)
+                    newG[c][3 - r] = g[r][c];
+            return newG;
+        }
+
+        function isGameOver() {
+            for (let r = 0; r < 4; r++) {
+                for (let c = 0; c < 4; c++) {
+                    if (grid[r][c] === 0) return false;
+                    if (c !== 3 && grid[r][c] === grid[r][c + 1]) return false;
+                    if (r !== 3 && grid[r][c] === grid[r + 1][c]) return false;
+                }
+            }
+            return true;
+        }
+
+        window.addEventListener('keydown', e => {
+            switch (e.key) {
+                case 'ArrowLeft': move(0); break;
+                case 'ArrowUp': move(1); break;
+                case 'ArrowRight': move(2); break;
+                case 'ArrowDown': move(3); break;
+            }
+        });
+
+        resetGame();
+    </script>
+</body>
+
+</html>

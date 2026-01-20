@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GameHub - Blackbox</title>
+  <style>
+    body{font-family:Segoe UI,Arial,sans-serif;margin:0;background:#111;color:#eef}
+    header{padding:12px;background:linear-gradient(90deg,#0f1724,#0b1220);display:flex;gap:12px;align-items:center}
+    select,button{padding:8px 10px;border-radius:6px;border:none}
+    #frameWrap{height:calc(100vh - 64px);display:flex}
+    iframe{flex:1;border:none}
+    #info{padding:12px;background:#072034;color:#bfe}
+    .small{font-size:13px;color:#9bd}
+  </style>
+</head>
+<body>
+  <header>
+    <div><strong>GameHub Blackbox</strong></div>
+    <select id="gameSelect">
+      <option value="car">2D Car</option>
+      <option value="car3d">3D Car</option>
+      <option value="flappy">Flappy Bird</option>
+    </select>
+    <button id="runBtn">Run</button>
+    <button id="openNew">Open in New Window</button>
+    <div style="flex:1"></div>
+    <button onclick="location.href='index.html'">Back</button>
+  </header>
+  <div id="frameWrap"><iframe id="gameFrame"></iframe></div>
+  <div id="info" class="small">This page bundles the three games into an encoded bundle. Select a game and click Run.</div>
+
+  <script>
+    // Character-code arrays for bundled games (avoids embedding </script> tokens)
+    const carArr = [
+      // car.html content char codes
+      ${Array.from((function(){
+        const s = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameHub - Car Simulator</title>
+    <link rel="stylesheet" href="css/shared.css">
+    <style>
+        .race-wrapper{display:flex;gap:20px}
+        #raceCanvas{flex:1;background:#2c3e50;border-radius:8px;border:3px solid #333}
+        #scene3D{display:none;flex:1;border-radius:8px;border:3px solid #333}
+        .controls{width:260px;display:flex;flex-direction:column;gap:12px}
+        .control-btn{padding:12px;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:#fff;border:none;border-radius:8px}
+        .track{background:#95a5a6;padding:10px;border-radius:8px}
+        .car{width:40px;height:20px;border-radius:4px}
+        .mode-toggle{margin-bottom:10px}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏁 Car Simulator</h1>
+        <div class="mode-toggle">
+            <button class="control-btn" onclick="toggleMode('2d')">2D Mode</button>
+            <button class="control-btn" onclick="toggleMode('3d')">3D Mode</button>
+        </div>
+        <div class="race-wrapper">
+            <canvas id="raceCanvas" width="800" height="360"></canvas>
+            <div id="scene3D"></div>
+            <div class="controls">
+                <div class="track">
+                    <div id="controlsText">Controls: 2D: Player1: A/D accelerate left/right, Player2: Left/Right arrows</div>
+                </div>
+                    <button class="control-btn" onclick="startSim()">Start Simulator</button>
+                    <button class="control-btn" onclick="resetSim()">Reset</button>
+                    <button class="control-btn" onclick="window.location.href='car3d.html'">3D Simulator</button>
+                    <button class="control-btn" onclick="window.location.href='flappy.html'">Play Flappy Bird</button>
+                    <button class="control-btn" onclick="goBack()">← Back to Hub</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+    <script>
+        let currentMode = '2d';
+        let scene, camera, renderer, car3d, clock3d;
+        let keys = {};
+        let carState = { speed: 0, angle: 0, position: new THREE.Vector3(0,0.5,0) };
+        const maxSpeed = 12;
+        const accel = 20;
+        const steerSpeed = 2.5;
+        const friction = 4;
+
+
+
+        // 2D variables
+        const canvas = document.getElementById('raceCanvas');
+        const ctx = canvas.getContext('2d');
+        let running2d = false;
+        const lanes = 3;
+        const laneHeight = canvas.height / lanes;
+
+        const players = [
+            {x:50, y: laneHeight*0.5 - 10, color:'#e74c3c', speed:0, accel:0.1, maxSpeed:5, friction:0.05},
+            {x:50, y: laneHeight*1.5 - 10, color:'#3498db', speed:0, accel:0.1, maxSpeed:5, friction:0.05}
+        ];
+
+        function toggleMode(mode) {
+            currentMode = mode;
+            if (mode === '2d') {
+                document.getElementById('raceCanvas').style.display = 'block';
+                document.getElementById('scene3D').style.display = 'none';
+                document.getElementById('controlsText').innerHTML = 'Controls: 2D: Player1: A/D accelerate left/right, Player2: Left/Right arrows';
+                reset2D();
+            } else {
+                document.getElementById('raceCanvas').style.display = 'none';
+                document.getElementById('scene3D').style.display = 'block';
+                document.getElementById('controlsText').innerHTML = 'Controls: 3D: W/S accelerate, A/D steer, Space brake';
+                init3D();
+            }
+        }
+
+        // 2D functions
+        function drawTrack(){
+            ctx.fillStyle = '#2c3e50';
+            ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.strokeStyle = '#bdc3c7';
+            for(let i=1;i<lanes;i++){
+                ctx.beginPath();
+                ctx.moveTo(0,i*laneHeight);
+                ctx.lineTo(canvas.width,i*laneHeight);
+                ctx.stroke();
+            }
+        }
+
+        function drawCars(){
+            players.forEach(p=>{
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x,p.y,40,20);
+            });
+        }
+
+        function update2D(){
+            if(!running2d) return;
+            players.forEach(p=>{
+                if (p.speed > 0) p.speed -= p.friction;
+                if (p.speed < 0) p.speed += p.friction;
+                p.x += p.speed;
+                p.x = Math.max(0, Math.min(canvas.width-40, p.x));
+            });
+            drawTrack();
+            drawCars();
+            requestAnimationFrame(update2D);
+        }
+
+        function startSim(){
+            if (currentMode === '2d') {
+                running2d = true;
+                update2D();
+            } else {
+                start3D();
+            }
+        }
+
+        function resetSim(){
+            if (currentMode === '2d') {
+                reset2D();
+            } else {
+                reset3D();
+            }
+        }
+
+        function reset2D(){
+            running2d = false;
+            players[0].x = 50; players[1].x = 50;
+            players[0].speed = 0; players[1].speed = 0;
+            drawTrack();
+            drawCars();
+        }
+
+        // 3D functions
+        function init3D() {
+            if (scene) return; // already initialized
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xbfd1e5);
+
+            camera = new THREE.PerspectiveCamera(60, 800/360, 0.1, 1000);
+            camera.position.set(0, 6, -10);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(800, 360);
+            document.getElementById('scene3D').appendChild(renderer.domElement);
+
+            // Lights
+            const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
+            hemi.position.set(0, 200, 0);
+            scene.add(hemi);
+            const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+            dir.position.set(5,10,7);
+            scene.add(dir);
+
+            // Ground
+            const groundGeo = new THREE.PlaneGeometry(400, 400);
+            const groundMat = new THREE.MeshStandardMaterial({ color: 0x808080 });
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI/2;
+            scene.add(ground);
+
+            // Simple track markings
+            const lineGeo = new THREE.PlaneGeometry(1, 400);
+            const lineMat = new THREE.MeshBasicMaterial({ color:0xffffff });
+            for(let i=-6;i<=6;i+=2){
+                const l = new THREE.Mesh(lineGeo, lineMat);
+                l.rotation.x = -Math.PI/2;
+                l.position.set(i*2,0.01,0);
+                scene.add(l);
+            }
+
+            // Car (box)
+            const carGeo = new THREE.BoxGeometry(1.2,0.6,2.2);
+            const carMat = new THREE.MeshStandardMaterial({ color:0xff4444 });
+            car3d = new THREE.Mesh(carGeo, carMat);
+            car3d.position.copy(carState.position);
+            car3d.castShadow = true;
+            scene.add(car3d);
+
+            // simple wheels (visual)
+            const wheelGeo = new THREE.CylinderGeometry(0.25,0.25,0.4,12);
+            const wheelMat = new THREE.MeshStandardMaterial({ color:0x222222 });
+            const offsets = [[0.6,-0.25,0.9],[ -0.6,-0.25,0.9],[0.6,-0.25,-0.9],[-0.6,-0.25,-0.9]];
+            offsets.forEach(o=>{
+                const w = new THREE.Mesh(wheelGeo, wheelMat);
+                w.rotation.z = Math.PI/2;
+                w.position.set(o[0],o[1],o[2]);
+                car3d.add(w);
+            });
+
+            clock3d = new THREE.Clock();
+        }
+
+        let running3d = false;
+        function start3D(){ if(!running3d){ running3d=true; clock3d.start(); animate3D(); }}
+        function reset3D(){ running3d=false; carState = { speed:0, angle:0, position: new THREE.Vector3(0,0.5,0) }; car3d.position.copy(carState.position); car3d.rotation.y = 0; camera.position.set(0,6,-10); camera.lookAt(car3d.position); render3D(); }
+
+        function animate3D(){
+            if(!running3d) return;
+            const dt = Math.min(0.05, clock3d.getDelta());
+
+            // Input
+            let forward = keys['w']?1: (keys['s']?-1:0);
+            let steer = keys['a']?-1: (keys['d']?1:0);
+            const brake = keys[' '];
+
+            // update speed
+            if(forward !== 0){
+                carState.speed += forward * accel * dt;
+            } else {
+                // natural friction
+                if(carState.speed>0) carState.speed = Math.max(0, carState.speed - friction*dt);
+                if(carState.speed<0) carState.speed = Math.min(0, carState.speed + friction*dt);
+            }
+
+            // brake
+            if(brake) carState.speed *= 0.95;
+
+            // clamp speed
+            carState.speed = Math.max(-maxSpeed/2, Math.min(maxSpeed, carState.speed));
+
+            // steering affects angle based on speed
+            carState.angle += steer * steerSpeed * dt * (carState.speed/Math.max(1, maxSpeed/3));
+
+            // update position using angle
+            const forwardVec = new THREE.Vector3(Math.sin(carState.angle), 0, Math.cos(carState.angle));
+            carState.position.addScaledVector(forwardVec, carState.speed * dt);
+
+            // apply to mesh
+            car3d.position.copy(carState.position);
+            car3d.rotation.y = carState.angle;
+
+            // camera follow
+            const camOffset = new THREE.Vector3(0,4,-8).applyAxisAngle(new THREE.Vector3(0,1,0), carState.angle);
+            const camPos = car3d.position.clone().add(camOffset);
+            camera.position.lerp(camPos, 0.12);
+            camera.lookAt(car3d.position.clone().add(new THREE.Vector3(0,1,0)));
+
+
+
+            render3D();
+            requestAnimationFrame(animate3D);
+        }
+
+        function render3D(){ renderer.render(scene, camera); }
+
+
+        // Event listeners
+
+        function goBack(){
+            window.location.href='index.html';
+        }
+
+        function goBack(){
+            window.location.href='index.html';
+        }
+
+        // Check if user is logged in
+        const user = JSON.parse(localStorage.getItem('currentUser'));
+        if (!user) {
+            window.location.href = 'signin.html';
+        } else {
+            toggleMode('2d');
+        }
+    </script>
+</body>
+</html>`;
+        return s;
+      })()).split('').map(c=>c.charCodeAt(0)).join(',')}
+    ];
+
+    const car3dArr = [
+      ${Array.from((function(){
+        const s = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>GameHub - Car 3D Simulator</title>
+    <style>
+        html,body{height:100%;margin:0}
+        #sceneWrap{width:100%;height:100vh;display:flex;flex-direction:column}
+        #canvasContainer{flex:1;position:relative}
+        #ui{position:absolute;top:12px;left:12px;z-index:10;background:rgba(255,255,255,0.9);padding:10px;border-radius:8px}
+        button{margin:6px;padding:8px 12px;border-radius:6px;border:none;background:#667eea;color:#fff}
+        .hint{font-size:13px;margin-top:6px}
+    </style>
+</head>
+<body>
+    <div id="sceneWrap">
+        <div id="canvasContainer">
+            <div id="ui">
+                <button onclick="startSim()">Start</button>
+                <button onclick="resetSim()">Reset</button>
+                <button onclick="goBack()">← Back</button>
+                <div class="hint">Controls: W/S accelerate, A/D steer, Space brake</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/three@0.158.0/build/three.min.js"></script>
+    <script>
+        let scene, camera, renderer, car, clock;
+        let keys = {};
+        let carState = { speed: 0, angle: 0, position: new THREE.Vector3(0,0.5,0) };
+        const maxSpeed = 12;
+        const accel = 20;
+        const steerSpeed = 2.5;
+        const friction = 4;
+
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xbfd1e5);
+
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 6, -10);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('canvasContainer').appendChild(renderer.domElement);
+
+            // Lights
+            const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.8);
+            hemi.position.set(0, 200, 0);
+            scene.add(hemi);
+            const dir = new THREE.DirectionalLight(0xffffff, 0.8);
+            dir.position.set(5,10,7);
+            scene.add(dir);
+
+            // Ground
+            const groundGeo = new THREE.PlaneGeometry(400, 400);
+            const groundMat = new THREE.MeshStandardMaterial({ color: 0x808080 });
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI/2;
+            scene.add(ground);
+
+            // Simple track markings
+            const lineGeo = new THREE.PlaneGeometry(1, 400);
+            const lineMat = new THREE.MeshBasicMaterial({ color:0xffffff });
+            for(let i=-6;i<=6;i+=2){
+                const l = new THREE.Mesh(lineGeo, lineMat);
+                l.rotation.x = -Math.PI/2;
+                l.position.set(i*2,0.01,0);
+                scene.add(l);
+            }
+
+            // Car (box)
+            const carGeo = new THREE.BoxGeometry(1.2,0.6,2.2);
+            const carMat = new THREE.MeshStandardMaterial({ color:0xff4444 });
+            car = new THREE.Mesh(carGeo, carMat);
+            car.position.copy(carState.position);
+            car.castShadow = true;
+            scene.add(car);
+
+            // simple wheels (visual)
+            const wheelGeo = new THREE.CylinderGeometry(0.25,0.25,0.4,12);
+            const wheelMat = new THREE.MeshStandardMaterial({ color:0x222222 });
+            const offsets = [[0.6,-0.25,0.9],[ -0.6,-0.25,0.9],[0.6,-0.25,-0.9],[-0.6,-0.25,-0.9]];
+            offsets.forEach(o=>{
+                const w = new THREE.Mesh(wheelGeo, wheelMat);
+                w.rotation.z = Math.PI/2;
+                w.position.set(o[0],o[1],o[2]);
+                car.add(w);
+            });
+
+            window.addEventListener('resize', onResize);
+            window.addEventListener('keydown', e=>keys[e.key.toLowerCase()]=true);
+            window.addEventListener('keyup', e=>keys[e.key.toLowerCase()]=false);
+
+            clock = new THREE.Clock();
+        }
+
+        function onResize(){
+            camera.aspect = window.innerWidth/window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        let running = false;
+        function startSim(){ if(!running){ running=true; clock.start(); animate(); }}
+        function resetSim(){ running=false; carState = { speed:0, angle:0, position: new THREE.Vector3(0,0.5,0) }; car.position.copy(carState.position); car.rotation.y = 0; camera.position.set(0,6,-10); camera.lookAt(car.position); render(); }
+
+        function animate(){
+            if(!running) return;
+            const dt = Math.min(0.05, clock.getDelta());
+
+            // Input
+            let forward = keys['w']?1: (keys['s']?-1:0);
+            let steer = keys['a']?-1: (keys['d']?1:0);
+            const brake = keys[' '];
+
+            // update speed
+            if(forward !== 0){
+                carState.speed += forward * accel * dt;
+            } else {
+                // natural friction
+                if(carState.speed>0) carState.speed = Math.max(0, carState.speed - friction*dt);
+                if(carState.speed<0) carState.speed = Math.min(0, carState.speed + friction*dt);
+            }
+
+            // brake
+            if(brake) carState.speed *= 0.95;
+
+            // clamp speed
+            carState.speed = Math.max(-maxSpeed/2, Math.min(maxSpeed, carState.speed));
+
+            // steering affects angle based on speed
+            carState.angle += steer * steerSpeed * dt * (carState.speed/Math.max(1, maxSpeed/3));
+
+            // update position using angle
+            const forwardVec = new THREE.Vector3(Math.sin(carState.angle), 0, Math.cos(carState.angle));
+            carState.position.addScaledVector(forwardVec, carState.speed * dt);
+
+            // apply to mesh
+            car.position.copy(carState.position);
+            car.rotation.y = carState.angle;
+
+            // camera follow
+            const camOffset = new THREE.Vector3(0,4,-8).applyAxisAngle(new THREE.Vector3(0,1,0), carState.angle);
+            const camPos = car.position.clone().add(camOffset);
+            camera.position.lerp(camPos, 0.12);
+            camera.lookAt(car.position.clone().add(new THREE.Vector3(0,1,0)));
+
+            render();
+            requestAnimationFrame(animate);
+        }
+
+        function render(){ renderer.render(scene, camera); }
+
+        function goBack(){ window.location.href='index.html'; }
+
+        // Initialize
+        init();
+        render();
+    </script>
+</body>
+</html>`;
+        return s;
+      })()).split('').map(c=>c.charCodeAt(0)).join(',')}
+    ];
+
+    const flappyArr = [
+      ${Array.from((function(){
+        const s = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>GameHub - Flappy Bird</title>
+    <style>
+        body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:linear-gradient(#71c5cf,#9be7e6);display:flex;flex-direction:column;align-items:center}
+        #gameWrap{margin-top:18px}
+        canvas{background:linear-gradient(#70c5ce,#9be7e6);border:4px solid #333;border-radius:8px}
+        .ui{margin-top:12px;display:flex;gap:8px}
+        button{padding:8px 12px;border-radius:6px;border:none;background:#667eea;color:white}
+        #score{font-weight:700;color:#1b2b34;margin-left:12px}
+    </style>
+</head>
+<body>
+    <h1>🐦 Flappy Bird (simple)</h1>
+    <div id="gameWrap">
+        <canvas id="flappy" width="480" height="640"></canvas>
+        <div class="ui">
+            <button onclick="startGame()">Start</button>
+            <button onclick="resetGame()">Reset</button>
+            <button onclick="goBack()">← Back</button>
+            <div id="score">Score: 0</div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('flappy');
+        const ctx = canvas.getContext('2d');
+        const W = canvas.width, H = canvas.height;
+
+        // Bird sprite (simple circle with eye)
+        const bird = { x: 80, y: H/2, r: 14, vy: 0 };
+
+        // Pipes array
+        let pipes = [];
+        let frame = 0;
+        let score = 0;
+        let running = false;
+
+        const gravity = 800; // px/s^2
+        const flapImpulse = -300; // px/s
+        const pipeGap = 150;
+        const pipeWidth = 60;
+        const pipeInterval = 110; // frames
+        const speed = 120; // pipe horizontal speed px/s
+
+        function resetState(){
+            bird.x = 80; bird.y = H/2; bird.vy = 0;
+            pipes = [];
+            frame = 0; score = 0; running = false;
+            document.getElementById('score').textContent = 'Score: 0';
+            draw();
+        }
+
+        function spawnPipe(){
+            const minTop = 40;
+            const maxTop = H - pipeGap - 40;
+            const top = Math.floor(Math.random()*(maxTop-minTop)+minTop);
+            pipes.push({ x: W + 10, top: top, passed:false });
+        }
+
+        function startGame(){ if(!running){ running = true; last = performance.now(); requestAnimationFrame(loop); }}
+        function resetGame(){ resetState(); }
+        function goBack(){ window.location.href='index.html'; }
+
+        // input
+        window.addEventListener('keydown', e=>{ if(e.code==='Space' || e.key===' ') flap(); });
+        window.addEventListener('mousedown', e=>{ flap(); });
+        function flap(){ if(!running) startGame(); bird.vy = flapImpulse; }
+
+        let last = 0;
+        function loop(ts){
+            if(!running) return;
+            const dt = (ts - last)/1000; last = ts;
+            frame++;
+
+            // physics
+            bird.vy += gravity * dt;
+            bird.y += bird.vy * dt;
+
+            // spawn pipes
+            if(frame % pipeInterval === 0) spawnPipe();
+
+            // update pipes
+            for(let i=pipes.length-1;i>=0;i--){
+                pipes[i].x -= speed * dt;
+                // check pass for score
+                if(!pipes[i].passed && pipes[i].x + pipeWidth < bird.x){ pipes[i].passed = true; score++; document.getElementById('score').textContent = 'Score: '+score; }
+                if(pipes[i].x < -pipeWidth) pipes.splice(i,1);
+            }
+
+            // collision
+            if(bird.y - bird.r < 0 || bird.y + bird.r > H) return gameOver();
+            for(let p of pipes){
+                // top pipe rectangle: x..x+pipeWidth, y:0..p.top
+                if(collideRectCircle(p.x, 0, pipeWidth, p.top, bird.x, bird.y, bird.r)) return gameOver();
+                // bottom pipe: x..x+pipeWidth, y: p.top+pipeGap..H
+                if(collideRectCircle(p.x, p.top+pipeGap, pipeWidth, H-(p.top+pipeGap), bird.x, bird.y, bird.r)) return gameOver();
+            }
+
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        function gameOver(){ running=false; alert('Game Over. Score: '+score); }
+
+        function collideRectCircle(rx, ry, rw, rh, cx, cy, cr){
+            const closestX = Math.max(rx, Math.min(cx, rx+rw));
+            const closestY = Math.max(ry, Math.min(cy, ry+rh));
+            const dx = cx - closestX; const dy = cy - closestY;
+            return (dx*dx + dy*dy) <= cr*cr;
+        }
+
+        function draw(){
+            // background sky
+            const g = ctx.createLinearGradient(0,0,0,H);
+            g.addColorStop(0,'#70c5ce'); g.addColorStop(1,'#9be7e6');
+            ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+
+            // draw ground
+            ctx.fillStyle = '#6aa84f'; ctx.fillRect(0,H-80,W,80);
+
+            // draw pipes
+            for(let p of pipes){
+                // top
+                ctx.fillStyle = '#228b22'; ctx.fillRect(p.x, 0, pipeWidth, p.top);
+                // bottom
+                ctx.fillStyle = '#228b22'; ctx.fillRect(p.x, p.top+pipeGap, pipeWidth, H-(p.top+pipeGap)-80);
+                // pipe caps
+                ctx.fillStyle = '#196619'; ctx.fillRect(p.x-6, p.top-12, pipeWidth+12, 12);
+                ctx.fillStyle = '#196619'; ctx.fillRect(p.x-6, p.top+pipeGap, pipeWidth+12, 12);
+            }
+
+            // draw bird (simple image-like)
+            // body
+            ctx.save();
+            ctx.translate(bird.x, bird.y);
+            ctx.rotate(Math.min(Math.max(bird.vy/400, -0.8), 0.6));
+            ctx.fillStyle = '#ffdd57'; ctx.beginPath(); ctx.ellipse(0,0,bird.r*1.2,bird.r,0,0,Math.PI*2); ctx.fill();
+            // wing
+            ctx.fillStyle = '#f0c040'; ctx.beginPath(); ctx.ellipse(-4,4,8,4,Math.PI/6,0,Math.PI*2); ctx.fill();
+            // eye
+            ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(6,-3,3,0,Math.PI*2); ctx.fill();
+            ctx.restore();
+        }
+
+        // start with reset
+        resetState();
+    </script>
+</body>
+</html>`;
+        return s;
+      })()).split('').map(c=>c.charCodeAt(0)).join(',')}
+    ];
+
+    function strFromArr(arr){ return String.fromCharCode.apply(null, arr); }
+    function runGame(key, openNewWindow=false){
+      let html = '';
+      if(key==='car') html = strFromArr(carArr);
+      if(key==='car3d') html = strFromArr(car3dArr);
+      if(key==='flappy') html = strFromArr(flappyArr);
+
+      if(openNewWindow){
+        const w = window.open();
+        w.document.open();
+        w.document.write(html);
+        w.document.close();
+      } else {
+        const iframe = document.getElementById('gameFrame');
+        const blob = new Blob([html], {type: 'text/html'});
+        iframe.src = URL.createObjectURL(blob);
+      }
+    }
+
+    document.getElementById('runBtn').addEventListener('click', ()=> runGame(document.getElementById('gameSelect').value,false));
+    document.getElementById('openNew').addEventListener('click', ()=> runGame(document.getElementById('gameSelect').value,true));
+  </script>
+</body>
+</html>
