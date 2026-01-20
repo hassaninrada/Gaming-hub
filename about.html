@@ -1,4 +1,4 @@
-<!doctype html>
+<!Doctype html> 
 <html lang="en">
 <head>
 <meta charset="utf-8">
@@ -31,6 +31,47 @@ body{
   100%{background-position:0% 50%}
 }
 
+/* Navbar */
+.navbar{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  padding:15px 30px;
+  display:flex;
+  justify-content:flex-start;
+  background:rgba(2,6,23,.95);
+  box-shadow:0 0 15px rgba(56,189,248,.3);
+  z-index:100;
+}
+
+/* Neon blinking link */
+@keyframes neonFlicker {
+  0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+    text-shadow:
+      0 0 5px #38bdf8,
+      0 0 10px #38bdf8,
+      0 0 20px #38bdf8,
+      0 0 40px #38bdf8,
+      0 0 60px #38bdf8,
+      0 0 80px #38bdf8;
+  }
+  20%, 22%, 24%, 55% {
+    text-shadow: none;
+  }
+}
+
+.neon-link {
+  color: #38bdf8;
+  font-weight:700;
+  font-size:1.1rem;
+  text-decoration:none;
+  padding:8px 16px;
+  border-radius:8px;
+  animation: neonFlicker 1.5s infinite alternate;
+}
+
+/* Card */
 .card{
   max-width:900px;
   width:100%;
@@ -41,6 +82,7 @@ body{
     0 0 0 1px rgba(59,130,246,.15),
     0 25px 60px rgba(0,0,0,.8);
   animation:fadeIn .9s ease;
+  margin-top:70px; /* So navbar doesn't overlap */
 }
 
 @keyframes fadeIn{
@@ -154,6 +196,13 @@ h1{
 
 <body>
 
+<!-- Navbar with Neon Blinking Back to Hub -->
+<div class="navbar">
+  <a href="index.html" class="neon-link">
+    <i class="fas fa-home"></i> Back to Hub
+  </a>
+</div>
+
 <div class="card">
   <div class="gamehub">🎮 GAMEHUB</div>
 
@@ -176,7 +225,7 @@ h1{
       </p>
 
       <div class="socials">
-        <a href="https://github.com/hassaninrada" target="_blank" title="GitHub">
+        <a href="" target="_blank" title="GitHub">
           <i class="fab fa-github"></i>
         </a>
 
@@ -187,9 +236,8 @@ h1{
         <a href="https://www.instagram.com/hassanainrada76?igsh=aTN3eTM4ZXg4N3Rx" target="_blank" title="Instagram">
           <i class="fab fa-instagram"></i>
         </a>
-
-        <a href="https://www.tiktok.com/@hero65.75?_r=1&_t=ZS-93EYLE0Ywug" target="_blank" title="TikTok">
-          <i class="fab fa-tiktok"></i>
+        <a href="https://www.tiktok.com/@hero65.75?_r=1&_t=ZS-93EYLE0Ywug" title="tiktok">
+          <i class="fas fa-tiktok"></i>
         </a>
       </div>
     </div>
