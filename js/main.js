@@ -3,7 +3,7 @@ const GAMES_DATA = [
         id: 'subway-surfers',
         title: 'Subway Surfers: World Tour',
         genre: 'Action',
-        image: 'https://static.wikia.nocookie.net/subwaysurf/images/6/69/WinterWonderlandAppIcon.png/revision/latest/scale-to-width-down/250?cb=20241209134108',
+        image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRoUX76gaL7u_M964_843DSyUEdiYcVexzn5g&s',
         rating: 4.9,
         plays: '10.5M'
     },
@@ -380,3 +380,4 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
