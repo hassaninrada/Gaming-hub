@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameHub Pro | Ultimate Gaming Portal</title>
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;700&display=swap">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body class="dark-theme">
+    <!-- Animated Background -->
+    <div class="bg-glow-container">
+        <div class="glow-sphere sphere-1"></div>
+        <div class="glow-sphere sphere-2"></div>
+    </div>
+
+    <!-- Header / Navbar -->
+    <header class="main-header">
+        <div class="nav-container">
+            <div class="logo">
+                <i data-lucide="gamepad-2"></i>
+                <span>GAMEHUB <span class="accent-text">PRO</span></span>
+            </div>
+            <nav class="desktop-nav">
+                <a href="index.html" class="active">Home</a>
+                <a href="#games">Games</a>
+                <a href="popular.html">Popular</a>
+                <a href="about.html">About</a>
+            </nav>
+            <div class="user-controls">
+                <div class="user-info" id="user-display" style="cursor: pointer;"
+                    onclick="window.location.href='auth.html'">
+                    <span id="player-name">Guest</span>
+                    <i data-lucide="user" class="user-avatar"></i>
+                </div>
+                <button class="logout-btn" title="Logout" id="logout-trigger" style="display: none;"><i
+                        data-lucide="log-out"></i></button>
+            </div>
+            <button class="mobile-toggle"><i data-lucide="menu"></i></button>
+        </div>
+    </header>
+
+    <main class="content-wrapper">
+        <!-- Hero Section -->
+        <section id="home" class="hero">
+            <div class="hero-content">
+                <span class="hero-tag">Instant Play • No Downloads</span>
+                <h1>Elevate Your <span class="text-gradient">Gaming Strategy</span></h1>
+                <p>Join millions of players in the world's most premium arcade collection. From high-octane racing to
+                    tactical board games.</p>
+                <div class="hero-actions">
+                    <a href="#games" class="btn-primary">Explore Games <i data-lucide="play"></i></a>
+                    <a href="#stats" class="btn-secondary">My Stats</a>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="floating-card">
+                    <img src="https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=600" alt="Cyber Racer">
+                    <div class="card-overlay">
+                        <h3>Cyber Racer GT</h3>
+                        <span>Trending #1</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Categories Filters -->
+        <section class="filters">
+            <div class="filter-container">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="action">Action</button>
+                <button class="filter-btn" data-filter="racing">Racing</button>
+                <button class="filter-btn" data-filter="sports">Sports</button>
+                <button class="filter-btn" data-filter="board">Board</button>
+                <button class="filter-btn" data-filter="puzzle">Puzzle</button>
+            </div>
+            <div class="search-bar">
+                <i data-lucide="search"></i>
+                <input type="text" id="game-search" placeholder="Search for your favorite game...">
+            </div>
+        </section>
+
+        <!-- Games Grid -->
+        <section id="games" class="games-section">
+            <h2 class="section-title">Trending <span class="accent">Arcade</span></h2>
+            <div id="games-grid" class="games-grid">
+                <!-- Games will be injected by JS -->
+            </div>
+        </section>
+
+        <!-- Stats Section -->
+        <section id="stats" class="stats-section">
+            <div class="stats-card glass">
+                <h2><i data-lucide="bar-chart-3"></i> Your Performance</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-value" id="games-played">0</span>
+                        <span class="stat-label">Played</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="wins">0</span>
+                        <span class="stat-label">Wins</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="total-score">0</span>
+                        <span class="stat-label">Total Score</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value accent" id="level">Lvl 1</span>
+                        <span class="stat-label">Rank</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="main-footer">
+        <div class="footer-container">
+            <div class="footer-brand">
+                <div class="logo">
+                    <i data-lucide="gamepad-2"></i>
+                    <span>GAMEHUB <span class="accent-text">PRO</span></span>
+                </div>
+                <p>The next generation of web-based gaming experiences.</p>
+            </div>
+            <div class="footer-links">
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms of Use</a>
+                <a href="#">Support</a>
+                <a href="#">Contact</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            &copy; 2026 GameHub Pro. All rights reserved.
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>

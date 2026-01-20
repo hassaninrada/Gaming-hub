@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameHub - Sign In</title>
+    <style>
+        :root{
+            --bg-1: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --card-bg: rgba(255,255,255,0.95);
+            --text: #222;
+            --muted: #666;
+            --accent: #667eea;
+            --input-bg: #fff;
+            --btn-text: #fff;
+            --surface-border: #e0e0e0;
+        }
+
+        [data-theme="dark"]{
+            --bg-1: linear-gradient(135deg,#0f1724 0%,#071028 100%);
+            --card-bg: rgba(8,10,15,0.9);
+            --text: #e6eef8;
+            --muted: #9fb0d6;
+            --accent: #4c7cff;
+            --input-bg: #0c1220;
+            --btn-text: #fff;
+            --surface-border: rgba(255,255,255,0.06);
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-1);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            transition: background 0.25s ease, color 0.25s ease;
+        }
+
+        .container {
+            background: var(--card-bg);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            width: 100%;
+            max-width: 400px;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo h1 {
+            font-size: 32px;
+            color: var(--accent);
+            margin-bottom: 10px;
+        }
+
+        .logo p {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .top-controls{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+        .theme-toggle{background:transparent;border:2px solid var(--surface-border);padding:8px 10px;border-radius:999px;color:var(--muted);cursor:pointer}
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--surface-border);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            background: var(--input-bg);
+            color: var(--text);
+        }
+
+        input[type="text"]:focus,
+        input[type="email"]:focus,
+        input[type="password"]:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .mode-toggle {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            color: #666;
+        }
+
+        .mode-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--accent);
+            color: var(--btn-text);
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .toggle-text {
+            text-align: center;
+            margin-top: 20px;
+            color: #666;
+            font-size: 14px;
+        }
+
+        .toggle-text a {
+            color: #667eea;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .toggle-text a:hover {
+            text-decoration: underline;
+        }
+
+        .error {
+            color: #e74c3c;
+            font-size: 13px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .guest-btn {
+            width: 100%;
+            padding: 10px;
+            background: transparent;
+            color: var(--text);
+            border: 2px solid var(--surface-border);
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .show-pass {
+            position: absolute;
+            right: 14px;
+            top: 36px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            color: #667eea;
+            padding: 4px;
+        }
+
+        .input-wrap{position:relative}
+
+        .input-anim{transition:box-shadow 0.18s ease,transform 0.18s ease}
+        .input-anim:focus{transform:translateY(-2px)}
+
+        .guest-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .success-message {
+            color: #27ae60;
+            text-align: center;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+    </style>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+    <div class="container">
+        <div class="top-controls">
+            <div class="logo">
+                <h1>🎮 GameHub</h1>
+                <p>Play Amazing Games Online</p>
+            </div>
+            <div>
+                <button id="themeBtn" class="theme-toggle" title="Toggle theme">🌙</button>
+            </div>
+        </div>
+
+        <div class="success-message" id="successMsg">✓ Login successful! Redirecting...</div>
+
+        <div class="mode-toggle">
+            <button class="mode-btn active" onclick="toggleMode('signin')">Sign In</button>
+            <button class="mode-btn" onclick="toggleMode('signup')">Sign Up</button>
+        </div>
+
+        <form id="signinForm">
+            <div class="form-group">
+                <label for="signin-email">Email Address</label>
+                <input type="email" id="signin-email" placeholder="your@email.com" required>
+                <div class="error" id="signin-email-error"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="signin-password">Password</label>
+                <div class="input-wrap">
+                    <input class="input-anim" type="password" id="signin-password" placeholder="••••••••" required>
+                    <button type="button" class="show-pass" data-target="signin-password">Show</button>
+                </div>
+                <div class="error" id="signin-password-error"></div>
+            </div>
+
+            <button type="submit" class="submit-btn">Sign In</button>
+        </form>
+
+        <form id="signupForm" class="hidden">
+            <div class="form-group">
+                <label for="signup-username">Username</label>
+                <div class="input-wrap">
+                    <input class="input-anim" type="text" id="signup-username" placeholder="Choose a username" required>
+                </div>
+                <div class="error" id="signup-username-error"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="signup-email">Email Address</label>
+                <input type="email" id="signup-email" placeholder="your@email.com" required>
+                <div class="error" id="signup-email-error"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="signup-password">Password</label>
+                <div class="input-wrap">
+                    <input class="input-anim" type="password" id="signup-password" placeholder="••••••••" required>
+                    <button type="button" class="show-pass" data-target="signup-password">Show</button>
+                </div>
+                <div class="error" id="signup-password-error"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="signup-confirm">Confirm Password</label>
+                <div class="input-wrap">
+                    <input class="input-anim" type="password" id="signup-confirm" placeholder="••••••••" required>
+                    <button type="button" class="show-pass" data-target="signup-confirm">Show</button>
+                </div>
+                <div class="error" id="signup-confirm-error"></div>
+            </div>
+
+            <button type="submit" class="submit-btn">Create Account</button>
+        </form>
+
+        <button class="guest-btn" onclick="playAsGuest()">Continue as Guest</button>
+
+        <div style="margin-top:14px;display:flex;flex-direction:column;gap:8px">
+            <button id="googleBtn" class="submit-btn" style="background:#fff;color:#222;border:2px solid #e0e0e0;box-shadow:none;display:flex;align-items:center;gap:10px">
+                <svg width="20" height="20" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"><path fill="#EA4335" d="M24 9.5c3.54 0 6.58 1.22 8.99 3.21l6.72-6.72C36.74 2.76 30.75 0.5 24 0.5 14.62 0.5 6.79 5.93 3.02 13.75l7.8 6.05C12.72 14.05 17.84 9.5 24 9.5z"/><path fill="#34A853" d="M46.5 24c0-1.6-.14-3.14-.4-4.62H24v9.06h12.45c-.54 2.9-2.24 5.36-4.78 6.99l7.73 6C43.83 36.1 46.5 30.53 46.5 24z"/><path fill="#4A90E2" d="M10.82 29.8A14.98 14.98 0 0 1 9.5 24c0-1.67.3-3.27.82-4.8L3.02 13.75A23.5 23.5 0 0 0 0.5 24c0 3.7.88 7.2 2.42 10.32l8-4.52z"/><path fill="#FBBC05" d="M24 46.5c6.75 0 12.74-2.26 17.31-6.13l-8.06-6.27C30.58 39.28 27.54 40.5 24 40.5 17.84 40.5 12.72 35.95 10.82 30.8l-7.8 6.05C6.79 42.07 14.62 46.5 24 46.5z"/></svg>
+                <span>Sign in with Google</span>
+            </button>
+            <button id="githubBtn" class="submit-btn" style="background:#24292e;display:flex;align-items:center;gap:10px">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg"><path d="M12 .5C5.65.5.5 5.64.5 12c0 5.08 3.29 9.38 7.86 10.89.58.11.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.7-3.88-1.54-3.88-1.54-.52-1.33-1.27-1.68-1.27-1.68-1.04-.71.08-.7.08-.7 1.15.08 1.75 1.18 1.75 1.18 1.02 1.74 2.68 1.24 3.33.95.1-.74.4-1.24.73-1.53-2.56-.29-5.25-1.28-5.25-5.69 0-1.26.45-2.29 1.18-3.1-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.15 1.18a10.95 10.95 0 0 1 5.73 0C18.9 3.4 19.86 3.7 19.86 3.7c.62 1.58.23 2.75.11 3.04.73.81 1.18 1.84 1.18 3.1 0 4.42-2.7 5.39-5.27 5.67.41.35.77 1.03.77 2.07 0 1.49-.01 2.69-.01 3.06 0 .31.21.68.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.64 18.35.5 12 .5z"/></svg>
+                <span>Sign in with GitHub</span>
+            </button>
+            <button id="otherBtn" class="submit-btn" style="background:#2d2d2d;display:flex;align-items:center;gap:10px">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff" xmlns="http://www.w3.org/2000/svg"><path d="M12 2a10 10 0 1 0 .001 20.001A10 10 0 0 0 12 2zm1 14.5h-2V9h2v7.5zM12 7.75a1.25 1.25 0 1 1 0-2.5 1.25 1.25 0 0 1 0 2.5z"/></svg>
+                <span>Sign in with Other</span>
+            </button>
+            <button id="chessBtn" class="submit-btn" style="background:transparent;color:var(--text);border:2px solid var(--surface-border);display:flex;align-items:center;gap:10px">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 2v2H5v2h14V4h-2V2H7z" fill="currentColor" opacity="0.2"/><path d="M5 8h14v11a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V8z" stroke="currentColor" stroke-width="1.2" fill="none"/></svg>
+                <span>Play Chess</span>
+            </button>
+        </div>
+
+        <div class="toggle-text">
+            <span id="toggleText">Don't have an account? <a onclick="toggleMode('signup')">Sign Up</a></span>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'signin';
+
+        function toggleMode(mode) {
+            currentMode = mode;
+            const signinForm = document.getElementById('signinForm');
+            const signupForm = document.getElementById('signupForm');
+            const modeBtns = document.querySelectorAll('.mode-btn');
+            const toggleText = document.getElementById('toggleText');
+
+            modeBtns.forEach(btn => btn.classList.remove('active'));
+            
+            if (mode === 'signin') {
+                signinForm.classList.remove('hidden');
+                signupForm.classList.add('hidden');
+                modeBtns[0].classList.add('active');
+                toggleText.innerHTML = "Don't have an account? <a onclick=\"toggleMode('signup')\">Sign Up</a>";
+            } else {
+                signinForm.classList.add('hidden');
+                signupForm.classList.remove('hidden');
+                modeBtns[1].classList.add('active');
+                toggleText.innerHTML = "Already have an account? <a onclick=\"toggleMode('signin')\">Sign In</a>";
+            }
+
+            document.querySelectorAll('.error').forEach(err => {
+                err.classList.remove('show');
+                err.textContent = '';
+            });
+        }
+
+        function clearErrors() {
+            document.querySelectorAll('.error').forEach(err => {
+                err.classList.remove('show');
+                err.textContent = '';
+            });
+        }
+
+        function validateEmail(email) {
+            return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        }
+
+        function showError(elementId, message) {
+            const errorEl = document.getElementById(elementId);
+            errorEl.textContent = message;
+            errorEl.classList.add('show');
+        }
+
+        function handleSignIn(e) {
+            e.preventDefault();
+            clearErrors();
+
+            const email = document.getElementById('signin-email').value.trim();
+            const password = document.getElementById('signin-password').value;
+
+            let hasError = false;
+
+            if (!email) {
+                showError('signin-email-error', 'Email is required');
+                hasError = true;
+            } else if (!validateEmail(email)) {
+                showError('signin-email-error', 'Invalid email format');
+                hasError = true;
+            }
+
+            if (!password) {
+                showError('signin-password-error', 'Password is required');
+                hasError = true;
+            } else if (password.length < 6) {
+                showError('signin-password-error', 'Password must be at least 6 characters');
+                hasError = true;
+            }
+
+            if (!hasError) {
+                const user = { email, password, username: email.split('@')[0] };
+                localStorage.setItem('currentUser', JSON.stringify(user));
+                showSuccessAndRedirect();
+            }
+        }
+
+        function handleSignUp(e) {
+            e.preventDefault();
+            clearErrors();
+
+            const username = document.getElementById('signup-username').value.trim();
+            const email = document.getElementById('signup-email').value.trim();
+            const password = document.getElementById('signup-password').value;
+            const confirm = document.getElementById('signup-confirm').value;
+
+            let hasError = false;
+
+            if (!username) {
+                showError('signup-username-error', 'Username is required');
+                hasError = true;
+            } else if (username.length < 3) {
+                showError('signup-username-error', 'Username must be at least 3 characters');
+                hasError = true;
+            }
+
+            if (!email) {
+                showError('signup-email-error', 'Email is required');
+                hasError = true;
+            } else if (!validateEmail(email)) {
+                showError('signup-email-error', 'Invalid email format');
+                hasError = true;
+            }
+
+            if (!password) {
+                showError('signup-password-error', 'Password is required');
+                hasError = true;
+            } else if (password.length < 6) {
+                showError('signup-password-error', 'Password must be at least 6 characters');
+                hasError = true;
+            }
+
+            if (password !== confirm) {
+                showError('signup-confirm-error', 'Passwords do not match');
+                hasError = true;
+            }
+
+            if (!hasError) {
+                const user = { username, email, password };
+                localStorage.setItem('currentUser', JSON.stringify(user));
+                showSuccessAndRedirect();
+            }
+        }
+
+        function showSuccessAndRedirect() {
+            const successMsg = document.getElementById('successMsg');
+            successMsg.classList.add('show');
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1500);
+        }
+
+        function playAsGuest() {
+            const guestUser = { username: 'Guest_' + Math.floor(Math.random() * 10000), isGuest: true };
+            localStorage.setItem('currentUser', JSON.stringify(guestUser));
+            window.location.href = 'index.html';
+        }
+
+        document.getElementById('signinForm').addEventListener('submit', handleSignIn);
+        document.getElementById('signupForm').addEventListener('submit', handleSignUp);
+
+        // Google Sign-In (client-side)
+        // The script will use a client id saved in localStorage under 'GOOGLE_CLIENT_ID'.
+        // If not present, it falls back to the placeholder and prompts you to paste one at runtime.
+        function getGoogleClientId(){
+            return (localStorage.getItem('GOOGLE_CLIENT_ID') || 'YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com');
+        }
+
+        function decodeJwtResponse(token) {
+            // Decode JWT payload (base64url)
+            const parts = token.split('.');
+            if (parts.length < 2) return null;
+            const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+            try {
+                const json = decodeURIComponent(atob(payload).split('').map(function(c) { return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2); }).join(''));
+                return JSON.parse(json);
+            } catch (e) { return null; }
+        }
+
+        function handleGoogleCredential(response) {
+            const profile = decodeJwtResponse(response.credential);
+            if (profile) {
+                const user = { username: profile.name || profile.email.split('@')[0], email: profile.email, provider: 'google' };
+                localStorage.setItem('currentUser', JSON.stringify(user));
+                showSuccessAndRedirect();
+            }
+        }
+
+        // Initialize Google button flow (will use client id from localStorage when available)
+        window.addEventListener('DOMContentLoaded', () => {
+            const currentId = getGoogleClientId();
+            function tryInit(id){
+                try {
+                    if (window.google && id && id.indexOf('YOUR_GOOGLE_CLIENT_ID') === -1) {
+                        google.accounts.id.initialize({ client_id: id, callback: handleGoogleCredential });
+                        google.accounts.id.renderButton(document.getElementById('googleBtn'), { theme: 'outline', size: 'large' });
+                        return true;
+                    }
+                } catch(e) { /* ignore */ }
+                return false;
+            }
+
+            tryInit(currentId);
+
+            // If no valid client id, allow user to paste one at runtime (saved to localStorage)
+            document.getElementById('googleBtn').addEventListener('click', () => {
+                const saved = getGoogleClientId();
+                if (saved && saved.indexOf('YOUR_GOOGLE_CLIENT_ID') === -1) {
+                    if (window.google) {
+                        alert('Google Sign-In initialized. Click the Google button to sign in.');
+                    } else {
+                        alert('Google script not loaded yet. Try again in a moment or reload the page.');
+                    }
+                    return;
+                }
+
+                const promptText = 'Paste your Google OAuth Client ID (e.g. xxxxx.apps.googleusercontent.com)\nGet it from: https://console.cloud.google.com/apis/credentials';
+                const input = prompt(promptText);
+                if (input && input.trim()) {
+                    const id = input.trim();
+                    localStorage.setItem('GOOGLE_CLIENT_ID', id);
+                    if (window.google) {
+                        tryInit(id);
+                        alert('Client ID saved and Google Sign-In initialized. Click the Google button again to sign in.');
+                    } else {
+                        alert('Client ID saved. Reload the page to complete Google Sign-In initialization.');
+                    }
+                }
+            });
+        });
+
+        // Theme toggle
+        (function(){
+            const themeBtn = document.getElementById('themeBtn');
+            function setTheme(t){
+                if(t==='dark') document.documentElement.setAttribute('data-theme','dark');
+                else document.documentElement.removeAttribute('data-theme');
+                themeBtn.textContent = (t==='dark') ? '☀️' : '🌙';
+                localStorage.setItem('GH_THEME', t);
+            }
+            const saved = localStorage.getItem('GH_THEME') || (window.matchMedia && window.matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light');
+            setTheme(saved);
+            themeBtn.addEventListener('click', ()=> setTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'));
+        })();
+
+        // Chess button
+        document.getElementById('chessBtn').addEventListener('click', ()=>{ window.location.href = 'chess.html'; });
+
+            // GitHub button - needs a server to exchange code for token
+            document.getElementById('githubBtn').addEventListener('click', () => {
+                const GITHUB_CLIENT_ID = 'YOUR_GITHUB_CLIENT_ID';
+                const redirect = window.location.origin + window.location.pathname; // send back to this page
+                if (GITHUB_CLIENT_ID.indexOf('YOUR_GITHUB_CLIENT_ID') === -1) {
+                    const url = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=read:user%20user:email&redirect_uri=${encodeURIComponent(redirect)}`;
+                    window.location.href = url;
+                } else {
+                    alert('To use GitHub Sign-In provide your GitHub OAuth App client id in the script.\n\nNote: GitHub requires a server to exchange the code for an access token.');
+                }
+            });
+
+            document.getElementById('otherBtn').addEventListener('click', () => {
+                alert('Add other providers by implementing their OAuth flow (often requires a backend).');
+            });
+        
+        ;
+
+        // If redirected back from GitHub with a code, capture it (INSECURE: exchange must be done on server)
+        (function checkGitHubCode(){
+            const params = new URLSearchParams(window.location.search);
+            const code = params.get('code');
+            if (code) {
+                // NOTE: This is NOT secure. Proper flow must exchange code on server with client_secret.
+                const pseudoUser = { username: 'github_user_' + code.slice(0,6), provider: 'github', code };
+                localStorage.setItem('currentUser', JSON.stringify(pseudoUser));
+                // Clean URL and redirect
+                history.replaceState({}, document.title, window.location.pathname);
+                showSuccessAndRedirect();
+            }
+        })();
+
+        // Check if user is already logged in
+        if (localStorage.getItem('currentUser')) {
+            window.location.href = 'index.html';
+        }
+    </script>
+    <script>
+        // Interactive helpers: show/hide password, realtime validation
+        document.querySelectorAll('.show-pass').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const target = document.getElementById(btn.dataset.target);
+                if (!target) return;
+                if (target.type === 'password') {
+                    target.type = 'text';
+                    btn.textContent = 'Hide';
+                } else {
+                    target.type = 'password';
+                    btn.textContent = 'Show';
+                }
+            });
+        });
+
+        // realtime validation for signup
+        document.getElementById('signup-email').addEventListener('input', (e) => {
+            const el = e.target;
+            const err = document.getElementById('signup-email-error');
+            if (!el.value) { err.textContent = 'Email is required'; err.classList.add('show'); }
+            else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value)) { err.textContent = 'Invalid email'; err.classList.add('show'); }
+            else { err.classList.remove('show'); err.textContent = ''; }
+        });
+
+        document.getElementById('signup-password').addEventListener('input', (e) => {
+            const el = e.target;
+            const err = document.getElementById('signup-password-error');
+            if (el.value.length > 0 && el.value.length < 6) { err.textContent = 'Too short'; err.classList.add('show'); }
+            else { err.classList.remove('show'); err.textContent = ''; }
+        });
+
+        // small floating label effect: add subtle focus transform
+        document.querySelectorAll('.input-anim').forEach(inp => {
+            inp.addEventListener('focus', () => inp.style.boxShadow = '0 6px 18px rgba(102,126,234,0.12)');
+            inp.addEventListener('blur', () => inp.style.boxShadow = 'none');
+        });
+        
+        // hide any site nav when on signup mode (if present)
+        function hideNavOnSignup(mode){
+            const nav = document.querySelector('nav');
+            if(!nav) return;
+            if(mode==='signup') nav.style.display='none';
+            else nav.style.display='';
+        }
+        // attach to toggleMode
+        const origToggle = window.toggleMode;
+        window.toggleMode = function(mode){ hideNavOnSignup(mode); origToggle(mode); };
+    </script>
+<script src="shared.js"></script>
+</body>
+</html>

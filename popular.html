@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Popular Hub | GameHub Pro</title>
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;700&display=swap">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+
+<body class="dark-theme">
+    <div class="bg-glow-container">
+        <div class="glow-sphere sphere-1"></div>
+        <div class="glow-sphere sphere-2"></div>
+    </div>
+
+    <header class="main-header">
+        <div class="nav-container">
+            <a href="index.html" class="logo" style="text-decoration: none; color: inherit;">
+                <i data-lucide="gamepad-2"></i>
+                <span>GAMEHUB <span class="accent-text">PRO</span></span>
+            </a>
+            <nav class="desktop-nav">
+                <a href="index.html">Home</a>
+                <a href="index.html#games">Games</a>
+                <a href="popular.html" class="active">Popular</a>
+                <a href="index.html#about">About</a>
+            </nav>
+            <div class="user-controls">
+                <div class="user-info" id="user-display">
+                    <span id="player-name">Guest</span>
+                    <i data-lucide="user" class="user-avatar"></i>
+                </div>
+                <button class="logout-btn" title="Logout" id="logout-trigger" style="display: none;"><i
+                        data-lucide="log-out"></i></button>
+            </div>
+        </div>
+    </header>
+
+    <main class="content-wrapper">
+        <section class="hero" style="min-height: 40vh; align-items: flex-end; padding-bottom: 40px;">
+            <div class="hero-content">
+                <span class="hero-tag">Hall of Fame</span>
+                <h1>Trending <span class="text-gradient">Elite Picks</span></h1>
+                <p>The most played and highest rated games as voted by the Nexus community.</p>
+            </div>
+        </section>
+
+        <section class="games-section">
+            <div id="popular-grid" class="games-grid">
+                <!-- Sorted games injected here -->
+            </div>
+        </section>
+    </main>
+
+    <footer class="main-footer">
+        <div class="footer-bottom">&copy; 2026 GameHub Pro. Nexus Edition.</div>
+    </footer>
+
+    <script src="js/main.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const grid = document.getElementById('popular-grid');
+
+            // Filter: Plays > 500k OR Rating > 4.7
+            const popular = GAMES_DATA.filter(g => {
+                const playsStr = g.plays.replace('M', '000').replace('k', '').replace('+', '');
+                const plays = parseFloat(playsStr) * (g.plays.includes('M') ? 1000 : 1);
+                return plays >= 500 || g.rating >= 4.7;
+            }).sort((a, b) => b.rating - a.rating);
+
+            renderPopular(popular);
+
+            function renderPopular(data) {
+                grid.innerHTML = '';
+                data.forEach(game => {
+                    const card = document.createElement('div');
+                    card.className = 'game-card';
+                    card.innerHTML = `
+                        <div class="card-img-wrap">
+                            <img src="${game.image}" alt="${game.title}">
+                            <span class="game-genre">${game.genre}</span>
+                        </div>
+                        <div class="card-body">
+                            <h3>${game.title}</h3>
+                            <div class="card-meta">
+                                <div class="rating"><i data-lucide="star" style="width:14px; fill:currentColor"></i> ${game.rating}</div>
+                                <div class="plays"><i data-lucide="users" style="width:14px"></i> ${game.plays}</div>
+                            </div>
+                        </div>
+                    `;
+                    card.onclick = () => window.location.href = `games/${game.id}.html`;
+                    grid.appendChild(card);
+                });
+                lucide.createIcons();
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus Auth | GameHub Pro</title>
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;700&display=swap">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: #050508;
+            overflow: hidden;
+            margin: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        .auth-container {
+            width: 100%;
+            max-width: 450px;
+            padding: 2px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 28px;
+            box-shadow: 0 0 50px rgba(124, 77, 255, 0.3);
+            position: relative;
+            z-index: 10;
+        }
+
+        .auth-card {
+            background: rgba(10, 10, 15, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 26px;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .auth-header {
+            text-align: center;
+        }
+
+        .auth-header h1 {
+            font-size: 32px;
+            font-weight: 800;
+            margin: 10px 0;
+            letter-spacing: -1px;
+        }
+
+        .auth-tabs {
+            display: flex;
+            background: rgba(255, 255, 255, 0.05);
+            padding: 5px;
+            border-radius: 14px;
+            margin-bottom: 10px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            color: var(--text-muted);
+            font-weight: 700;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .input-group label {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-left: 5px;
+        }
+
+        .input-field {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--glass-border);
+            padding: 15px 20px;
+            border-radius: 12px;
+            color: #fff;
+            font-family: inherit;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .input-field:focus {
+            border-color: var(--accent-primary);
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 15px rgba(124, 77, 255, 0.2);
+        }
+
+        .auth-footer {
+            text-align: center;
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .auth-footer a {
+            color: var(--accent-secondary);
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .glow-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(124, 77, 255, 0.1) 0%, transparent 70%);
+            z-index: 1;
+        }
+    </style>
+</head>
+
+<body class="dark-theme">
+    <div class="glow-overlay"></div>
+
+    <div class="auth-container">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="logo" style="justify-content: center; margin-bottom: 20px;">
+                    <i data-lucide="shield-check" style="color: var(--accent-primary); width: 40px; height: 40px;"></i>
+                </div>
+                <h1 id="auth-title">Welcome <span class="accent-text">Back</span></h1>
+                <p style="color: var(--text-muted); font-size: 14px;">Connect your neural link to the hub.</p>
+            </div>
+
+            <div class="auth-tabs">
+                <button class="tab-btn active" onclick="switchTab('login')">Login</button>
+                <button class="tab-btn" onclick="switchTab('signup')">Sign Up</button>
+            </div>
+
+            <div id="auth-form" style="display: flex; flex-direction: column; gap: 20px;">
+                <div class="input-group" id="user-group" style="display: none;">
+                    <label>Username</label>
+                    <input type="text" class="input-field" id="username" placeholder="Enter your handle...">
+                </div>
+                <div class="input-group">
+                    <label>Email Address</label>
+                    <input type="email" class="input-field" id="email" placeholder="nexus@core.io">
+                </div>
+                <div class="input-group">
+                    <label>Access Key</label>
+                    <input type="password" class="input-field" id="password" placeholder="••••••••">
+                </div>
+
+                <button class="btn-primary" style="width: 100%; padding: 16px; margin-top: 10px;"
+                    onclick="handleAuth()">
+                    Authorize Access
+                </button>
+            </div>
+
+            <div class="auth-footer">
+                <a href="index.html">← Return to Public Hub</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        let mode = 'login';
+
+        function switchTab(newMode) {
+            mode = newMode;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            const title = document.getElementById('auth-title');
+            const userGroup = document.getElementById('user-group');
+
+            if (mode === 'signup') {
+                title.innerHTML = 'Create <span class="accent-text">Identity</span>';
+                userGroup.style.display = 'flex';
+            } else {
+                title.innerHTML = 'Welcome <span class="accent-text">Back</span>';
+                userGroup.style.display = 'none';
+            }
+        }
+
+        function handleAuth() {
+            const email = document.getElementById('email').value;
+            const pass = document.getElementById('password').value;
+            const user = document.getElementById('username').value;
+
+            if (!email || !pass) {
+                alert('Neutral link failed: Incomplete credentials.');
+                return;
+            }
+
+            if (mode === 'signup') {
+                if (!user) { alert('Handle required.'); return; }
+                const users = JSON.parse(localStorage.getItem('portal_users') || '[]');
+                if (users.find(u => u.email === email)) {
+                    alert('Identity already registered.');
+                    return;
+                }
+                users.push({ name: user, email: email, password: pass });
+                localStorage.setItem('portal_users', JSON.stringify(users));
+                localStorage.setItem('portal_session', JSON.stringify({ name: user, email: email }));
+                alert('Identity established. Redirecting...');
+            } else {
+                const users = JSON.parse(localStorage.getItem('portal_users') || '[]');
+                const found = users.find(u => u.email === email && u.password === pass);
+                if (found) {
+                    localStorage.setItem('portal_session', JSON.stringify({ name: found.name, email: found.email }));
+                    alert('Access granted. Welcome, ' + found.name);
+                } else {
+                    alert('Access denied: Invalid credentials.');
+                    return;
+                }
+            }
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+
+</html>
