@@ -1,5 +1,5 @@
 
-🎮 #GameHub – Where Learning Meets Gaming
+🎮 **GameHub – Where Learning Meets Gaming**
 
 GameHub is a modern, interactive gaming platform created to make learning fun, engaging, and exciting for students. Instead of traditional boring study methods, GameHub turns education into an enjoyable experience by combining games, challenges, quizzes, and skill-based activities in one place. The main goal of GameHub is to help students learn faster and better while having fun.
 
