@@ -3,7 +3,7 @@ const GAMES_DATA = [
         id: 'subway-surfers',
         title: 'Subway Surfers: World Tour',
         genre: 'Action',
-        image: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRoUX76gaL7u_M964_843DSyUEdiYcVexzn5g&s',
+        image: 'assets/thumbnails/subway.png',
         rating: 4.9,
         plays: '10.5M'
     },
@@ -380,4 +380,5 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
 
